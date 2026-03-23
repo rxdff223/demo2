@@ -797,7 +797,14 @@ app.get('/', (c) => {
   </div>
 
   <!-- ==================== JavaScript ==================== -->
-  <script src="/static/app.js"></script>
+  <script src="/static/js/state.js"></script>
+  <script src="/static/js/core.js"></script>
+  <script src="/static/js/auth.js"></script>
+  <script src="/static/js/sieves.js"></script>
+  <script src="/static/js/dashboard.js"></script>
+  <script src="/static/js/project-session.js"></script>
+  <script src="/static/js/ui.js"></script>
+  <script src="/static/js/app-init.js"></script>
 </body>
 </html>`)
 })
