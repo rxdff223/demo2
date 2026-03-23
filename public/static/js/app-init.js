@@ -36,6 +36,10 @@
       if (savedTimeline) { try { timelineByDeal = JSON.parse(savedTimeline); } catch(e) {} }
       const savedContractPayload = localStorage.getItem('ec_contractPayloadByDeal');
       if (savedContractPayload) { try { contractPayloadByDeal = JSON.parse(savedContractPayload); } catch(e) {} }
+      const savedPerspective = localStorage.getItem('ec_perspective');
+      if (savedPerspective === 'investor' || savedPerspective === 'financer') currentPerspective = savedPerspective;
+      document.body.setAttribute('data-perspective', currentPerspective);
+      updatePerspectiveUI();
     }
 
     document.addEventListener('DOMContentLoaded', initApp);

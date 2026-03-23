@@ -192,6 +192,7 @@ export const MAIN_HTML = `
         <div class="flex items-center space-x-1.5">
           <button onclick="showOnboarding()" class="tooltip flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all" style="color: #6b7280; background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.06);" data-tip="新手引导"><i class="fas fa-question-circle text-xs"></i><span>帮助</span></button>
           <div class="h-5 mx-0.5" style="width: 1px; background: rgba(0,0,0,0.08);"></div>
+          <button id="perspectiveToggleBtn" onclick="togglePerspective()" class="tooltip flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all" style="color: #a16207; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.16);" data-tip="视角切换"><i id="perspectiveToggleIcon" class="fas fa-arrows-rotate text-xs"></i><span id="perspectiveToggleText">切换融资方视角</span></button>
           <button onclick="showToast('info','AI推荐引擎','正在基于您的筛子偏好生成推荐')" class="tooltip flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all" style="color: #49A89A; background: rgba(93,196,179,0.06); border: 1px solid rgba(93,196,179,0.12);" data-tip="AI推荐"><i class="fas fa-robot"></i><span>推荐</span></button>
           <!-- User avatar -->
           <div class="pl-1.5 ml-0.5 relative">
@@ -204,7 +205,7 @@ export const MAIN_HTML = `
               <div class="user-dropdown-header"><div class="flex items-center space-x-3"><div id="ddAvatar" class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold" style="background: linear-gradient(135deg, #5DC4B3, #3D8F83);">U</div><div><div id="ddName" class="font-semibold text-gray-900 text-sm">用户</div><div id="ddRole" class="text-xs text-gray-500">投资者</div></div></div></div>
               <div class="py-1">
                 <button class="user-dropdown-item" onclick="showToast('info','个人中心','功能开发中'); closeUserDD();"><i class="fas fa-user-circle"></i>个人中心</button>
-                <button class="user-dropdown-item" onclick="showToast('info','筛子偏好','可在评估通中管理您的筛子模型'); closeUserDD();"><i class="fas fa-sliders-h"></i>筛子偏好设置</button>
+                <button class="user-dropdown-item investor-only" onclick="showToast('info','筛子偏好','可在评估通中管理您的筛子模型'); closeUserDD();"><i class="fas fa-sliders-h"></i>筛子偏好设置</button>
                 <button class="user-dropdown-item" onclick="showOnboarding(); closeUserDD();"><i class="fas fa-graduation-cap"></i>新手引导</button>
                 <div class="user-dropdown-divider"></div>
                 <button class="user-dropdown-item danger" onclick="closeUserDD(); handleLogout();"><i class="fas fa-sign-out-alt"></i>退出登录</button>
@@ -215,7 +216,7 @@ export const MAIN_HTML = `
       </div>
     </nav>
 
-    <div class="flex-1 p-4">
+    <div id="dashboardContentSurface" class="flex-1 p-4">
       <div class="max-w-7xl mx-auto">
         <!-- Hero Banner -->
         <div class="relative overflow-hidden rounded-2xl mb-5 p-6" style="background: linear-gradient(135deg, #0a2e2a 0%, #0f3d36 40%, #164e47 100%);">
@@ -223,15 +224,15 @@ export const MAIN_HTML = `
           <div class="relative z-10 flex items-center justify-between">
             <div>
               <h2 class="text-xl font-bold text-white mb-1" style="letter-spacing: -0.02em;" id="welcomeText">欢迎回来</h2>
-              <p class="text-sm" style="color: rgba(255,255,255,0.6);">发起通的投资机会，经您的评估通筛子精选后展示于此</p>
+              <p id="heroSubtitle" class="text-sm" style="color: rgba(255,255,255,0.6);">发起通的投资机会，经您的评估通筛子精选后展示于此</p>
             </div>
             <div class="flex items-center gap-3">
               <div class="text-right hidden sm:block">
                 <p class="text-xs" style="color:rgba(255,255,255,0.4);">数据来源</p>
                 <p class="text-sm font-semibold text-amber-300"><i class="fas fa-paper-plane mr-1"></i>发起通 Originate</p>
               </div>
-              <div class="w-px h-10 bg-white/10 hidden sm:block"></div>
-              <div class="text-right hidden sm:block">
+              <div class="investor-only w-px h-10 bg-white/10 hidden sm:block"></div>
+              <div class="investor-only text-right hidden sm:block">
                 <p class="text-xs" style="color:rgba(255,255,255,0.4);">筛选引擎</p>
                 <p class="text-sm font-semibold text-cyan-300"><i class="fas fa-filter mr-1"></i>评估通 Assess</p>
               </div>
@@ -244,7 +245,7 @@ export const MAIN_HTML = `
           <div class="stat-card animate-fade-in cursor-pointer" onclick="selectSieve('all')">
             <div class="flex items-center justify-between"><div><p class="stat-label">全部机会</p><p class="stat-value" id="statTotal">0</p><p class="text-xs text-gray-400 mt-0.5">来自发起通</p></div><div class="icon-container icon-container-sm" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 4px 12px rgba(245,158,11,0.3);"><i class="fas fa-paper-plane text-white text-sm"></i></div></div>
           </div>
-          <div class="stat-card animate-fade-in delay-100 cursor-pointer" onclick="selectSieve('all')">
+          <div class="stat-card investor-only animate-fade-in delay-100 cursor-pointer" onclick="selectSieve('all')">
             <div class="flex items-center justify-between"><div><p class="stat-label">筛后通过</p><p class="stat-value" id="statFiltered">0</p><p class="text-xs text-gray-400 mt-0.5">当前筛子匹配</p></div><div class="icon-container icon-container-sm" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); box-shadow: 0 4px 12px rgba(6,182,212,0.3);"><i class="fas fa-filter text-white text-sm"></i></div></div>
           </div>
           <div class="stat-card animate-fade-in delay-200 cursor-pointer" onclick="filterByStatus('interested')">
@@ -256,7 +257,7 @@ export const MAIN_HTML = `
         </div>
 
         <!-- ===== 筛子选择器 (核心新功能) ===== -->
-        <div class="bg-white rounded-2xl p-4 mb-4 border border-gray-100" style="box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div class="investor-only bg-white rounded-2xl p-4 mb-4 border border-gray-100" style="box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center space-x-2">
               <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, rgba(6,182,212,0.12), rgba(14,165,233,0.12));"><i class="fas fa-filter text-cyan-600 text-sm"></i></div>
@@ -325,7 +326,7 @@ export const MAIN_HTML = `
             <div class="text-center mb-6">
               <div class="empty-state-icon mx-auto animate-float"><i class="fas fa-filter"></i></div>
               <h3 class="text-xl font-bold text-gray-800 mb-2" style="letter-spacing:-0.02em;">等待发起通的投资机会</h3>
-              <p class="text-sm text-gray-500">机会由融资方通过发起通上传，经评估通筛子过滤后展示于此</p>
+              <p id="emptyStateSubtitle" class="text-sm text-gray-500">机会由融资方通过发起通上传，经评估通筛子过滤后展示于此</p>
             </div>
             <div class="grid grid-cols-2 gap-4 mb-6">
               <button onclick="loadDemoData()" class="group text-left p-5 rounded-2xl border transition-all" style="background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.06);" onmouseover="this.style.borderColor='rgba(52,199,89,0.3)';this.style.boxShadow='0 8px 32px rgba(52,199,89,0.08)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(0,0,0,0.06)';this.style.boxShadow='none';this.style.transform='none'">
@@ -333,13 +334,13 @@ export const MAIN_HTML = `
                 <h4 class="font-bold text-gray-800 mb-1 text-base">加载演示数据</h4>
                 <p class="text-sm text-gray-500 leading-relaxed">体验完整功能，查看模拟的发起通项目经筛子过滤后的效果</p>
               </button>
-              <div class="text-left p-5 rounded-2xl border" style="background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.06);">
+              <div class="investor-only text-left p-5 rounded-2xl border" style="background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.06);">
                 <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style="background: linear-gradient(135deg, rgba(6,182,212,0.12), rgba(14,165,233,0.12));"><i class="fas fa-filter text-cyan-600 text-lg"></i></div>
                 <h4 class="font-bold text-gray-800 mb-1 text-base">配置您的筛子</h4>
                 <p class="text-sm text-gray-500 leading-relaxed">在评估通中设置您的AI筛选标准，让参与通自动展示匹配机会</p>
               </div>
             </div>
-            <div class="rounded-2xl p-5 border" style="background: rgba(255,255,255,0.8); border-color: rgba(0,0,0,0.04);">
+            <div class="investor-only rounded-2xl p-5 border" style="background: rgba(255,255,255,0.8); border-color: rgba(0,0,0,0.04);">
               <h4 class="text-xs font-bold uppercase tracking-wider mb-4" style="color: #86868b;"><i class="fas fa-route mr-1.5" style="color: #5DC4B3;"></i>数据流向</h4>
               <div class="flex items-center justify-center gap-3 flex-wrap">
                 <div class="flex items-center gap-2 px-4 py-2.5 bg-amber-50 rounded-xl"><i class="fas fa-paper-plane text-amber-500"></i><span class="text-sm font-semibold text-amber-700">发起通</span></div>

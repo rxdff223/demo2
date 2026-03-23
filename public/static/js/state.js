@@ -4,6 +4,7 @@
     let dealsList = []; // 当前筛子过滤后的机会
     let currentDeal = null;
     let currentSieve = 'all'; // 当前选中的筛子
+    let currentPerspective = 'investor'; // investor | financer
     let dashboardViewMode = 'store'; // store | brand
     let currentSessionTab = 'research'; // 项目会话当前Tab
     let researchInputsByDeal = {}; // 做功课Tab中的营业额预估草稿
@@ -203,4 +204,3 @@
       });
       return models;
     }
-

@@ -14,6 +14,10 @@
 
     // ==================== 筛子管理弹窗 ====================
     function showSieveManager() {
+      if (currentPerspective === 'financer') {
+        showToast('info', '融资方视角', '该视角已隐藏评估通筛子功能');
+        return;
+      }
       // 移除旧弹窗
       const old = document.getElementById('sieveManagerModal'); if (old) old.remove();
 
@@ -136,6 +140,7 @@
 
     // ==================== 筛子选择 ====================
     function selectSieve(sieveKey) {
+      if (currentPerspective === 'financer' && sieveKey !== 'all') sieveKey = 'all';
       currentSieve = sieveKey;
       // 更新UI
       document.querySelectorAll('#sieveSelector .sieve-chip').forEach(el => {
@@ -168,4 +173,3 @@
         showToast('success', sieve.name, '筛选出 ' + dealsList.length + ' 个匹配机会');
       }
     }
-

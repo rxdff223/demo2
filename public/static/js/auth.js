@@ -62,6 +62,7 @@
       renderSieveSelector();
       setDashboardViewMode(dashboardViewMode);
       selectSieve('all');
+      applyPerspective(currentPerspective, { animate: false, persist: false, toast: false });
       showToast('success', '登录成功', '欢迎回来，' + name);
       if (!localStorage.getItem('ec_onboarded')) { setTimeout(showOnboarding, 800); }
     }
@@ -113,4 +114,3 @@
       }));
       localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
     }
-

@@ -27,3 +27,15 @@
     .user-dropdown-item:hover { background: #f8fafc; color: #0f766e; }
     .user-dropdown-item.danger:hover { background: #fef2f2; color: #dc2626; }
     .user-dropdown-divider { height: 1px; background: #f1f5f9; margin: 4px 0; }
+    body[data-perspective="financer"] .investor-only { display: none !important; }
+    .perspective-flip {
+      animation: perspectiveFlip 460ms cubic-bezier(0.28, 0.11, 0.32, 1);
+      transform-origin: center center;
+      will-change: transform, opacity;
+      backface-visibility: hidden;
+    }
+    @keyframes perspectiveFlip {
+      0% { transform: perspective(1200px) rotateY(0deg); opacity: 1; }
+      45% { transform: perspective(1200px) rotateY(88deg); opacity: 0.32; }
+      100% { transform: perspective(1200px) rotateY(0deg); opacity: 1; }
+    }

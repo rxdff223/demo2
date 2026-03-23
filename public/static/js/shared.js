@@ -33,6 +33,76 @@
       const fab = document.getElementById('aiFab'); if (fab) fab.classList.toggle('hidden', pageId === 'pageAuth');
     }
 
+    function updatePerspectiveUI() {
+      const isFinancer = currentPerspective === 'financer';
+      const btn = document.getElementById('perspectiveToggleBtn');
+      const icon = document.getElementById('perspectiveToggleIcon');
+      const text = document.getElementById('perspectiveToggleText');
+      if (btn) {
+        if (isFinancer) {
+          btn.style.color = '#0f766e';
+          btn.style.background = 'rgba(13,148,136,0.10)';
+          btn.style.border = '1px solid rgba(13,148,136,0.25)';
+        } else {
+          btn.style.color = '#a16207';
+          btn.style.background = 'rgba(245,158,11,0.08)';
+          btn.style.border = '1px solid rgba(245,158,11,0.16)';
+        }
+      }
+      if (icon) icon.className = isFinancer ? 'fas fa-rotate-left text-xs' : 'fas fa-arrows-rotate text-xs';
+      if (text) text.textContent = isFinancer ? '返回投资者视角' : '切换融资方视角';
+
+      const heroSubtitle = document.getElementById('heroSubtitle');
+      if (heroSubtitle) {
+        heroSubtitle.textContent = isFinancer
+          ? '发起通的投资机会将在此展示，便于从融资方视角浏览与跟进。'
+          : '发起通的投资机会，经您的评估通筛子精选后展示于此';
+      }
+      const emptySubtitle = document.getElementById('emptyStateSubtitle');
+      if (emptySubtitle) {
+        emptySubtitle.textContent = isFinancer
+          ? '当前以融资方视角展示机会列表，可先加载演示数据。'
+          : '机会由融资方通过发起通上传，经评估通筛子过滤后展示于此';
+      }
+      const role = document.getElementById('ddRole');
+      if (role) role.textContent = isFinancer ? '融资方视角' : '投资者';
+    }
+
+    function playPerspectiveFlip() {
+      const surface = document.getElementById('dashboardContentSurface');
+      if (!surface) return;
+      surface.classList.remove('perspective-flip');
+      void surface.offsetWidth;
+      surface.classList.add('perspective-flip');
+      setTimeout(() => surface.classList.remove('perspective-flip'), 480);
+    }
+
+    function applyPerspective(perspective, opts) {
+      const options = opts || {};
+      const next = perspective === 'financer' ? 'financer' : 'investor';
+      const changed = currentPerspective !== next;
+      currentPerspective = next;
+      document.body.setAttribute('data-perspective', currentPerspective);
+      if (options.persist !== false) localStorage.setItem('ec_perspective', currentPerspective);
+
+      updatePerspectiveUI();
+      if (currentUser && currentPerspective === 'financer' && typeof selectSieve === 'function') {
+        selectSieve('all');
+      } else if (currentUser && typeof renderDeals === 'function') {
+        renderDeals();
+      }
+      if (options.animate !== false && changed) playPerspectiveFlip();
+
+      if (options.toast !== false && changed) {
+        if (currentPerspective === 'financer') showToast('info', '已切换融资方视角', '主页面已隐藏评估通相关区域');
+        else showToast('info', '已切换投资者视角', '主页面已恢复评估通相关区域');
+      }
+    }
+
+    function togglePerspective() {
+      applyPerspective(currentPerspective === 'financer' ? 'investor' : 'financer', { animate: true, persist: true, toast: true });
+    }
+
     function switchSessionTab(tab) {
       currentSessionTab = tab;
       const tabs = ['research', 'workbench', 'intent', 'negotiation', 'timeline'];
@@ -97,4 +167,3 @@
     function saveIntentState() {
       localStorage.setItem('ec_intentByDeal', JSON.stringify(intentByDeal));
     }
-
