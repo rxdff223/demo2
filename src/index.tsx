@@ -490,15 +490,15 @@ app.get('/', (c) => {
       </div>
       <div class="w-3/5 flex flex-col bg-slate-50 overflow-y-auto">
         <div class="p-3 border-b border-gray-200 bg-white flex items-center justify-between">
-          <div class="flex items-center space-x-2"><span class="text-sm font-semibold text-gray-700"><i class="fas fa-filter mr-1.5 text-cyan-500"></i>筛子评估报告</span></div>
+          <div class="flex items-center space-x-2"><span class="text-sm font-semibold text-gray-700"><i class="fas fa-book-open mr-1.5 text-cyan-500"></i>做功课工作台</span></div>
           <div class="flex bg-gray-100 rounded-lg p-0.5">
-            <button onclick="switchDetailView('sieve')" id="btnSieve" class="px-2.5 py-1 rounded-md text-xs font-semibold bg-white shadow text-teal-600"><i class="fas fa-filter mr-1"></i>筛子结果</button>
-            <button onclick="switchDetailView('financials')" id="btnFinancials" class="px-2.5 py-1 rounded-md text-xs font-semibold text-gray-600"><i class="fas fa-calculator mr-1"></i>财务</button>
-            <button onclick="switchDetailView('timeline')" id="btnTimeline" class="px-2.5 py-1 rounded-md text-xs font-semibold text-gray-600"><i class="fas fa-stream mr-1"></i>时间线</button>
+            <button onclick="switchDetailView('onepager')" id="btnOnepager" class="px-2.5 py-1 rounded-md text-xs font-semibold bg-white shadow text-teal-600"><i class="fas fa-file-lines mr-1"></i>一页纸</button>
+            <button onclick="switchDetailView('comparables')" id="btnComparables" class="px-2.5 py-1 rounded-md text-xs font-semibold text-gray-600"><i class="fas fa-scale-balanced mr-1"></i>同行参考</button>
+            <button onclick="switchDetailView('forecast')" id="btnForecast" class="px-2.5 py-1 rounded-md text-xs font-semibold text-gray-600"><i class="fas fa-chart-line mr-1"></i>营业额预估</button>
           </div>
         </div>
         <div class="flex-1 p-5" id="detailRight">
-          <div class="text-center py-16 text-gray-400"><i class="fas fa-chart-area text-4xl mb-3 opacity-40"></i><p class="text-sm">选择一个项目查看筛子评估报告</p></div>
+          <div class="text-center py-16 text-gray-400"><i class="fas fa-chart-area text-4xl mb-3 opacity-40"></i><p class="text-sm">选择一个项目开始做功课</p></div>
         </div>
       </div>
     </div>
@@ -509,6 +509,7 @@ app.get('/', (c) => {
         <div class="bg-white rounded-2xl border border-gray-100 p-5">
           <h3 class="text-base font-bold text-gray-900 mb-2"><i class="fas fa-sliders-h mr-2 text-cyan-600"></i>条款工作台（即将接入）</h3>
           <p class="text-sm text-gray-500">下一步将实现公共参数/私有预测/派生指标三区结构，以及金额、分成比例、触达月数的双向联动计算。</p>
+          <p class="text-xs text-cyan-700 mt-3 p-2.5 rounded-lg bg-cyan-50 border border-cyan-100" id="workbenchPrefillHint">暂无从做功课带入的营业额预估值。</p>
         </div>
       </div>
     </div>
@@ -581,7 +582,39 @@ app.get('/', (c) => {
     let currentSieve = 'all'; // 当前选中的筛子
     let dashboardViewMode = 'store'; // store | brand
     let currentSessionTab = 'research'; // 项目会话当前Tab
+    let researchInputsByDeal = {}; // 做功课Tab中的营业额预估草稿
     let obStep = 0;
+
+    const INDUSTRY_COMPARABLES = {
+      餐饮: {
+        amountRange: '300万 - 900万',
+        shareRange: '8% - 15%',
+        aprRange: '10% - 18%',
+        revenueRange: '120万 - 260万/月',
+        cases: ['华东连锁餐饮品牌：680万 / 11% / 22个月', '华南快餐品牌：420万 / 12% / 20个月', '川渝火锅品牌：760万 / 10% / 24个月']
+      },
+      零售: {
+        amountRange: '220万 - 780万',
+        shareRange: '7% - 13%',
+        aprRange: '9% - 16%',
+        revenueRange: '90万 - 210万/月',
+        cases: ['新消费零售品牌：510万 / 10% / 24个月', '潮玩零售门店：360万 / 12% / 18个月', '区域商超品牌：730万 / 9% / 30个月']
+      },
+      科技: {
+        amountRange: '350万 - 1200万',
+        shareRange: '10% - 16%',
+        aprRange: '12% - 20%',
+        revenueRange: '150万 - 360万/月',
+        cases: ['企业SaaS项目：920万 / 12% / 24个月', 'AI应用项目：650万 / 14% / 20个月', '产业数字化项目：1100万 / 10% / 30个月']
+      },
+      default: {
+        amountRange: '250万 - 850万',
+        shareRange: '8% - 14%',
+        aprRange: '10% - 18%',
+        revenueRange: '100万 - 240万/月',
+        cases: ['同类YITO案例A：520万 / 11% / 24个月', '同类YITO案例B：430万 / 12% / 21个月', '同类YITO案例C：780万 / 9% / 30个月']
+      }
+    };
 
     // ==================== 筛子库（全量可用筛子）====================
     const SIEVE_LIBRARY = {
@@ -790,6 +823,7 @@ app.get('/', (c) => {
           btn.classList.toggle('hover:bg-gray-50', t !== tab);
         }
       });
+      if (tab === 'workbench') refreshWorkbenchPrefill();
     }
 
     function setDashboardViewMode(mode) {
@@ -809,6 +843,26 @@ app.get('/', (c) => {
         brandBtn.classList.toggle('hover:bg-gray-50', mode !== 'brand');
       }
       renderDeals();
+    }
+
+    function saveResearchInputs() {
+      localStorage.setItem('ec_researchInputsByDeal', JSON.stringify(researchInputsByDeal));
+    }
+
+    function parseWanValue(raw) {
+      const val = parseFloat(String(raw || '').replace(/[^\d.]/g, ''));
+      return Number.isFinite(val) ? val : 0;
+    }
+
+    function refreshWorkbenchPrefill() {
+      const hint = document.getElementById('workbenchPrefillHint');
+      if (!hint) return;
+      const saved = currentDeal ? researchInputsByDeal[currentDeal.id] : null;
+      if (!currentDeal || !saved || !saved.predictedMonthlyRevenue) {
+        hint.textContent = '暂无从做功课带入的营业额预估值。';
+        return;
+      }
+      hint.textContent = '已带入「' + currentDeal.name + '」营业额预估：' + saved.predictedMonthlyRevenue.toFixed(1) + '万/月。下一步将用于条款工作台派生指标计算。';
     }
 
     // ==================== Auth ====================
@@ -1225,6 +1279,58 @@ app.get('/', (c) => {
       showToast(deal.skipped ? 'warning' : 'info', deal.skipped ? '已标记跳过' : '已取消跳过', deal.name);
     }
 
+    function runRevenueForecast() {
+      if (!currentDeal) return;
+      const base = parseWanValue(document.getElementById('forecastBase')?.value);
+      const growth = parseFloat(document.getElementById('forecastGrowth')?.value || '0');
+      const seasonality = parseFloat(document.getElementById('forecastSeasonality')?.value || '0');
+      if (!base || base <= 0) {
+        showToast('warning', '请输入营业额基准值', '建议输入最近3个月平均月营收（单位：万）');
+        return;
+      }
+      const predicted = Math.max(1, base * (1 + growth / 100) * (1 + seasonality / 100));
+      const shareRatio = parseFloat(String(currentDeal.revenueShare || '').replace('%', '')) / 100 || 0.1;
+      const monthlyPayback = predicted * shareRatio;
+      const amountWan = currentDeal.amount / 10000;
+      const paybackMonths = monthlyPayback > 0 ? (amountWan / monthlyPayback) : 0;
+
+      researchInputsByDeal[currentDeal.id] = {
+        base,
+        growth,
+        seasonality,
+        predictedMonthlyRevenue: predicted,
+        paybackMonths
+      };
+      saveResearchInputs();
+
+      const resultEl = document.getElementById('forecastResult');
+      if (resultEl) {
+        resultEl.innerHTML =
+          '<div class="p-3 rounded-xl bg-teal-50 border border-teal-100">' +
+            '<p class="text-xs text-teal-700">预测月均营业额</p>' +
+            '<p class="text-lg font-bold text-teal-700 mt-0.5">' + predicted.toFixed(1) + '万/月</p>' +
+            '<p class="text-xs text-teal-600 mt-1">按当前分成比例估算，回本约 ' + paybackMonths.toFixed(1) + ' 个月</p>' +
+          '</div>';
+      }
+      showToast('success', '预测完成', '已生成营业额预估，可带入条款工作台');
+    }
+
+    function applyForecastToWorkbench() {
+      if (!currentDeal) return;
+      const saved = researchInputsByDeal[currentDeal.id];
+      if (!saved || !saved.predictedMonthlyRevenue) {
+        showToast('warning', '尚未生成预测', '请先在营业额预估工作台点击“计算预估”');
+        return;
+      }
+      currentDeal.forecastMonthlyRevenue = saved.predictedMonthlyRevenue.toFixed(1) + '万/月';
+      const original = allDeals.find(d => d.id === currentDeal.id);
+      if (original) original.forecastMonthlyRevenue = currentDeal.forecastMonthlyRevenue;
+      localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
+      switchSessionTab('workbench');
+      refreshWorkbenchPrefill();
+      showToast('success', '已带入条款工作台', '预测值：' + currentDeal.forecastMonthlyRevenue);
+    }
+
     // ==================== Detail Page ====================
     function openDetail(id) {
       currentDeal = dealsList.find(d => d.id === id) || allDeals.find(d => d.id === id);
@@ -1270,9 +1376,19 @@ app.get('/', (c) => {
           '<div class="p-3 bg-gray-50 rounded-xl border border-gray-100"><div class="flex items-center justify-between"><span class="text-xs font-medium text-gray-600">风控评级</span><span class="text-xs font-bold text-emerald-600">' + (currentDeal.riskGrade || 'N/A') + '</span></div></div>' +
         '</div>';
 
-      // Right panel — 筛子评估结果
+      // Right panel — 做功课内容
       const hasMatch = currentDeal.matchScore !== null && currentDeal.matchScore !== undefined;
       const matchColor = hasMatch ? (currentDeal.matchScore >= 80 ? '#10b981' : currentDeal.matchScore >= 60 ? '#f59e0b' : '#ef4444') : '#6b7280';
+      const industryRef = INDUSTRY_COMPARABLES[currentDeal.industry] || INDUSTRY_COMPARABLES.default;
+      const savedResearch = researchInputsByDeal[currentDeal.id] || {};
+      const defaultBase = savedResearch.base || parseWanValue(currentDeal.monthlyRevenue) || 100;
+      const defaultGrowth = Number.isFinite(savedResearch.growth) ? savedResearch.growth : 6;
+      const defaultSeasonality = Number.isFinite(savedResearch.seasonality) ? savedResearch.seasonality : 0;
+      const onePagerSummary = '项目「' + currentDeal.name + '」属于' + currentDeal.industry + '行业，当前AI评分' + currentDeal.aiScore + '，分成比例' + currentDeal.revenueShare + '，拟融资' + (currentDeal.amount/10000).toFixed(0) + '万。结合运营年限' + currentDeal.operatingYears + '年与风控评级' + (currentDeal.riskGrade || 'N/A') + '，建议重点核验现金流稳定性和季节波动。';
+      const riskHint = parseFloat(currentDeal.aiScore) >= 8.5 ? '风险整体可控，建议重点关注扩张节奏与回款稳定性。' : '建议加强风控复核，重点校验营收波动与团队执行力。';
+      const forecastPreview = savedResearch.predictedMonthlyRevenue
+        ? '<div class="p-3 rounded-xl bg-teal-50 border border-teal-100"><p class="text-xs text-teal-700">上次预测</p><p class="text-base font-bold text-teal-700">' + savedResearch.predictedMonthlyRevenue.toFixed(1) + '万/月</p><p class="text-xs text-teal-600 mt-1">预估回本：' + ((savedResearch.paybackMonths || 0).toFixed(1)) + '个月</p></div>'
+        : '<p class="text-xs text-gray-400">尚未计算，填写参数后点击“计算预估”。</p>';
 
       // 生成各筛子的评估结果（只评估用户面板中的筛子）
       let sieveResults = '';
@@ -1295,26 +1411,68 @@ app.get('/', (c) => {
         sieveResults = '<div class="text-center py-4"><p class="text-sm text-gray-400">暂未添加筛子</p><button onclick="goToDashboard(); setTimeout(showSieveManager, 300);" class="text-xs text-cyan-600 mt-1 hover:underline">去管理筛子</button></div>';
       }
 
+      const comparableCases = industryRef.cases.map((item, idx) =>
+        '<div class="p-3 bg-gray-50 rounded-xl border border-gray-100">' +
+          '<p class="text-xs text-gray-500 mb-1">案例 ' + (idx + 1) + '</p>' +
+          '<p class="text-sm font-medium text-gray-700">' + item + '</p>' +
+        '</div>'
+      ).join('');
+
       document.getElementById('detailRight').innerHTML =
         '<div class="space-y-5">' +
-          // 综合匹配概览
-          (hasMatch ? '<div class="bg-white rounded-2xl p-5 border border-gray-100"><h3 class="text-sm font-bold text-gray-800 mb-3"><i class="fas fa-bullseye mr-1.5" style="color:' + matchColor + ';"></i>当前筛子匹配度</h3><div class="flex items-center gap-4"><div class="w-20 h-20 rounded-full border-4 flex items-center justify-center" style="border-color:' + matchColor + ';"><span class="text-2xl font-bold" style="color:' + matchColor + ';">' + currentDeal.matchScore + '%</span></div><div class="flex-1"><p class="text-sm font-semibold text-gray-700">' + (currentDeal.sieveName || '当前筛子') + '</p><p class="text-xs text-gray-500 mt-1">' + (currentDeal.matchScore >= 80 ? '高度匹配，建议重点关注' : currentDeal.matchScore >= 60 ? '中等匹配，可进一步了解' : '匹配度较低') + '</p><div class="match-bar mt-2" style="height:5px;"><div class="match-bar-fill" style="width:' + currentDeal.matchScore + '%; background:' + matchColor + ';"></div></div></div></div></div>' : '') +
-          // 各筛子评估结果
-          '<div class="bg-white rounded-2xl p-5 border border-gray-100"><h3 class="text-sm font-bold text-gray-800 mb-4"><i class="fas fa-filter mr-1.5 text-cyan-500"></i>全部筛子评估结果</h3><div class="space-y-3">' + sieveResults + '</div></div>' +
-          // 收入预测
-          '<div class="bg-white rounded-2xl p-5 border border-gray-100"><h3 class="text-sm font-bold text-gray-800 mb-4"><i class="fas fa-chart-line mr-1.5 text-teal-500"></i>收入预测</h3><div class="h-40 flex items-end justify-around gap-2">' +
-          [65,78,82,70,88,92,85,90,95,88,92,98].map((v,i) => '<div class="flex flex-col items-center flex-1"><div class="w-full rounded-t-md" style="height:' + v + '%; background: linear-gradient(180deg, #5DC4B3 0%, #49A89A 100%); opacity:' + (0.5+i*0.04) + ';"></div><span class="text-xs text-gray-400 mt-1">' + (i+1) + '月</span></div>').join('') +
-          '</div></div>' +
+          // 一页纸
+          '<div id="sectionOnepager" class="bg-white rounded-2xl p-5 border border-gray-100">' +
+            '<h3 class="text-sm font-bold text-gray-800 mb-3"><i class="fas fa-file-lines mr-1.5 text-cyan-500"></i>项目一页纸</h3>' +
+            '<p class="text-sm text-gray-600 leading-relaxed mb-4">' + onePagerSummary + '</p>' +
+            '<div class="grid grid-cols-2 gap-3 mb-4">' +
+              '<div class="p-3 rounded-xl bg-cyan-50"><p class="text-xs text-gray-500">近12月月营收趋势</p><p class="text-sm font-bold text-cyan-700 mt-1">' + (currentDeal.monthlyRevenue || '暂无') + '</p></div>' +
+              '<div class="p-3 rounded-xl bg-teal-50"><p class="text-xs text-gray-500">净利润率（估）</p><p class="text-sm font-bold text-teal-700 mt-1">' + (8 + Math.floor(parseFloat(currentDeal.aiScore) || 7)) + '%</p></div>' +
+              '<div class="p-3 rounded-xl bg-amber-50"><p class="text-xs text-gray-500">主体信息</p><p class="text-sm font-bold text-amber-700 mt-1">' + (currentDeal.companyName || currentDeal.originator || '融资主体') + '</p></div>' +
+              '<div class="p-3 rounded-xl bg-rose-50"><p class="text-xs text-gray-500">风险标注</p><p class="text-sm font-bold text-rose-700 mt-1">' + riskHint + '</p></div>' +
+            '</div>' +
+            (hasMatch ? '<div class="p-3 bg-gray-50 rounded-xl border border-gray-100"><div class="flex items-center justify-between"><p class="text-xs font-medium text-gray-600">当前筛子匹配度</p><p class="text-sm font-bold" style="color:' + matchColor + ';">' + currentDeal.matchScore + '%</p></div><div class="match-bar mt-2"><div class="match-bar-fill" style="width:' + currentDeal.matchScore + '%; background:' + matchColor + ';"></div></div></div>' : '') +
+          '</div>' +
+          // 同行业成交参考
+          '<div id="sectionComparables" class="bg-white rounded-2xl p-5 border border-gray-100">' +
+            '<h3 class="text-sm font-bold text-gray-800 mb-4"><i class="fas fa-scale-balanced mr-1.5 text-amber-500"></i>同行业成交参考</h3>' +
+            '<div class="grid grid-cols-2 gap-3 mb-4">' +
+              '<div class="p-3 rounded-xl bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">融资金额区间</p><p class="text-sm font-semibold text-gray-700 mt-1">' + industryRef.amountRange + '</p></div>' +
+              '<div class="p-3 rounded-xl bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">分成比例区间</p><p class="text-sm font-semibold text-gray-700 mt-1">' + industryRef.shareRange + '</p></div>' +
+              '<div class="p-3 rounded-xl bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">封顶APR区间</p><p class="text-sm font-semibold text-gray-700 mt-1">' + industryRef.aprRange + '</p></div>' +
+              '<div class="p-3 rounded-xl bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">同行业门店月营收</p><p class="text-sm font-semibold text-gray-700 mt-1">' + industryRef.revenueRange + '</p></div>' +
+            '</div>' +
+            '<div class="space-y-2">' + comparableCases + '</div>' +
+          '</div>' +
+          // 营业额预估入口
+          '<div id="sectionForecast" class="bg-white rounded-2xl p-5 border border-gray-100">' +
+            '<h3 class="text-sm font-bold text-gray-800 mb-4"><i class="fas fa-chart-line mr-1.5 text-teal-500"></i>营业额预估工作台</h3>' +
+            '<div class="grid grid-cols-3 gap-3 mb-4">' +
+              '<div><label class="block text-xs text-gray-500 mb-1">月营收基准（万）</label><input id="forecastBase" type="number" min="1" value="' + defaultBase + '" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"></div>' +
+              '<div><label class="block text-xs text-gray-500 mb-1">增长率（%）</label><input id="forecastGrowth" type="number" value="' + defaultGrowth + '" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"></div>' +
+              '<div><label class="block text-xs text-gray-500 mb-1">季节修正（%）</label><input id="forecastSeasonality" type="number" value="' + defaultSeasonality + '" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"></div>' +
+            '</div>' +
+            '<div id="forecastResult" class="mb-4">' + forecastPreview + '</div>' +
+            '<div class="flex items-center gap-2">' +
+              '<button onclick="runRevenueForecast()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700">计算预估</button>' +
+              '<button onclick="applyForecastToWorkbench()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-cyan-600 text-white hover:bg-cyan-700">带入条款工作台</button>' +
+              '<button onclick="switchSessionTab(&apos;workbench&apos;)" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">前往条款工作台</button>' +
+            '</div>' +
+          '</div>' +
+          // 筛子评估结果（辅助）
+          '<div class="bg-white rounded-2xl p-5 border border-gray-100"><h3 class="text-sm font-bold text-gray-800 mb-4"><i class="fas fa-filter mr-1.5 text-cyan-500"></i>筛子评估（辅助参考）</h3><div class="space-y-3">' + sieveResults + '</div>' +
+          '<p class="text-xs text-gray-400 mt-3">说明：做功课阶段建议优先结合一页纸和同行参考，再用筛子结果做交叉验证。</p></div>' +
           // 项目流向
           '<div class="bg-white rounded-2xl p-5 border border-gray-100"><h3 class="text-sm font-bold text-gray-800 mb-4"><i class="fas fa-route mr-1.5 text-amber-500"></i>项目流向</h3><div class="space-y-4">' +
           [
             { icon: 'fa-paper-plane', color: 'amber', title: '发起通 — 项目提交', desc: currentDeal.originator + ' · ' + currentDeal.originateDate },
             { icon: 'fa-filter', color: 'cyan', title: '评估通 — AI筛选', desc: '通过 ' + (hasMatch ? currentDeal.matchScore + '% 匹配' : '基础审核') },
-            { icon: 'fa-hand-pointer', color: 'teal', title: '参与通 — 当前阶段', desc: currentDeal.status === 'open' ? '等待您的参与决策' : '已表达参与意向' },
+            { icon: 'fa-book-open', color: 'teal', title: '参与通 — 做功课', desc: '一页纸 + 同行参考 + 营业额预估' },
             { icon: 'fa-file-contract', color: 'gray', title: '条款通 → 合约通', desc: '确认参与后进入条款协商' }
           ].map(t => '<div class="flex items-start space-x-3"><div class="w-8 h-8 rounded-lg bg-' + t.color + '-100 flex items-center justify-center flex-shrink-0"><i class="fas ' + t.icon + ' text-' + t.color + '-600 text-xs"></i></div><div><p class="text-sm font-medium text-gray-700">' + t.title + '</p><p class="text-xs text-gray-400">' + t.desc + '</p></div></div>').join('') +
           '</div></div>' +
         '</div>';
+
+      switchDetailView('onepager');
 
       switchPage('pageProjectSession');
       switchSessionTab('research');
@@ -1342,10 +1500,20 @@ app.get('/', (c) => {
     }
 
     function switchDetailView(view) {
-      ['sieve', 'financials', 'timeline'].forEach(v => {
-        const btn = document.getElementById('btn' + v.charAt(0).toUpperCase() + v.slice(1));
-        if (btn) { btn.className = v === view ? 'px-2.5 py-1 rounded-md text-xs font-semibold bg-white shadow text-teal-600' : 'px-2.5 py-1 rounded-md text-xs font-semibold text-gray-600'; }
+      const mapping = {
+        onepager: { btn: 'btnOnepager', section: 'sectionOnepager' },
+        comparables: { btn: 'btnComparables', section: 'sectionComparables' },
+        forecast: { btn: 'btnForecast', section: 'sectionForecast' }
+      };
+      Object.keys(mapping).forEach(k => {
+        const btn = document.getElementById(mapping[k].btn);
+        if (!btn) return;
+        btn.className = k === view
+          ? 'px-2.5 py-1 rounded-md text-xs font-semibold bg-white shadow text-teal-600'
+          : 'px-2.5 py-1 rounded-md text-xs font-semibold text-gray-600';
       });
+      const target = mapping[view] ? document.getElementById(mapping[view].section) : null;
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     // ==================== Modals ====================
@@ -1421,6 +1589,8 @@ app.get('/', (c) => {
       // 尝试从 localStorage 恢复
       const saved = localStorage.getItem('ec_allDeals');
       if (saved) { try { allDeals = JSON.parse(saved); } catch(e) {} }
+      const savedResearch = localStorage.getItem('ec_researchInputsByDeal');
+      if (savedResearch) { try { researchInputsByDeal = JSON.parse(savedResearch); } catch(e) {} }
     }
 
     document.addEventListener('DOMContentLoaded', initApp);
