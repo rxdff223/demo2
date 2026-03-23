@@ -53,8 +53,15 @@
       grid.innerHTML = filtered.map(d => {
         const st = statusMap[d.status] || statusMap.open;
         const disclosure = disclosureMap[d.historyDisclosure || 'none'] || disclosureMap.none;
+        const isFinancer = currentPerspective === 'financer';
         const hasMatch = d.matchScore !== null && d.matchScore !== undefined;
         const matchColor = hasMatch ? (d.matchScore >= 80 ? '#10b981' : d.matchScore >= 60 ? '#f59e0b' : '#ef4444') : '#6b7280';
+        const titleHoverClass = isFinancer ? 'group-hover:text-amber-700' : 'group-hover:text-teal-600';
+        const kybCls = d.kybVerified
+          ? (isFinancer ? 'bg-amber-50 text-amber-700' : 'bg-cyan-50 text-cyan-700')
+          : 'bg-rose-50 text-rose-700';
+        const amountIconCls = isFinancer ? 'text-amber-500' : 'text-teal-500';
+        const periodIconCls = isFinancer ? 'text-amber-500' : 'text-cyan-500';
         const title = dashboardViewMode === 'brand' ? (d.brandName || d.name) : (d.storeName || d.name);
         const subtitle = dashboardViewMode === 'brand'
           ? (d.companyName || d.originator || '融资主体') + ' · ' + d.industry + ' · ' + d.location
@@ -65,7 +72,7 @@
           '<div class="flex items-center justify-between mb-2">' +
             '<div class="flex items-center space-x-2 min-w-0">' +
               '<div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, rgba(93,196,179,0.12), rgba(73,168,154,0.12));"><i class="fas fa-briefcase" style="color: #5DC4B3;"></i></div>' +
-              '<div class="min-w-0"><h3 class="font-bold text-gray-900 text-sm group-hover:text-teal-600 transition-colors truncate">' + title + '</h3><p class="text-xs text-gray-500 truncate">' + subtitle + '</p></div>' +
+              '<div class="min-w-0"><h3 class="font-bold text-gray-900 text-sm ' + titleHoverClass + ' transition-colors truncate">' + title + '</h3><p class="text-xs text-gray-500 truncate">' + subtitle + '</p></div>' +
             '</div>' +
             '<div class="flex items-center gap-1.5"><span class="badge ' + st.cls + ' flex-shrink-0"><i class="fas ' + st.icon + ' mr-1"></i>' + st.label + '</span>' +
             (d.skipped ? '<span class="badge badge-danger"><i class="fas fa-forward mr-1"></i>已跳过</span>' : '') + '</div>' +
@@ -74,7 +81,7 @@
           '<div class="flex flex-wrap items-center gap-1.5 mb-2">' +
             '<span class="source-tag source-originate"><i class="fas fa-paper-plane" style="font-size:8px;"></i>发起通</span>' +
             '<span class="text-[10px] px-2 py-0.5 rounded ' + disclosure.cls + '">' + disclosure.label + '</span>' +
-            '<span class="text-[10px] px-2 py-0.5 rounded ' + (d.kybVerified ? 'bg-cyan-50 text-cyan-700' : 'bg-rose-50 text-rose-700') + '">' + (d.kybVerified ? 'KYB已认证' : 'KYB未认证') + '</span>' +
+            '<span class="text-[10px] px-2 py-0.5 rounded ' + kybCls + '">' + (d.kybVerified ? 'KYB已认证' : 'KYB未认证') + '</span>' +
             (hasMatch ? '<span class="sieve-tag sieve-pass"><i class="fas fa-check" style="font-size:8px;"></i>' + (d.sieveName || '筛子') + '</span>' : '') +
             (hasMatch ? '<span class="text-xs font-bold" style="color:' + matchColor + ';">' + d.matchScore + '%匹配</span>' : '') +
           '</div>' +
@@ -83,9 +90,9 @@
           // Metrics
           '<div class="flex items-center justify-between text-xs">' +
             '<div class="flex items-center space-x-3">' +
-              '<span class="text-gray-500"><i class="fas fa-yen-sign mr-1 text-teal-500"></i>' + (d.amount/10000).toFixed(0) + '万</span>' +
+              '<span class="text-gray-500"><i class="fas fa-yen-sign mr-1 ' + amountIconCls + '"></i>' + (d.amount/10000).toFixed(0) + '万</span>' +
               '<span class="text-gray-500"><i class="fas fa-percentage mr-1 text-amber-500"></i>' + d.revenueShare + '</span>' +
-              '<span class="text-gray-500"><i class="fas fa-calendar mr-1 text-cyan-500"></i>' + d.period + '</span>' +
+              '<span class="text-gray-500"><i class="fas fa-calendar mr-1 ' + periodIconCls + '"></i>' + d.period + '</span>' +
             '</div>' +
             '<div class="flex items-center"><i class="fas fa-star text-amber-400 mr-1"></i><span class="font-bold text-gray-700">' + d.aiScore + '</span></div>' +
           '</div>' +
@@ -190,4 +197,3 @@
       switchSessionTab('workbench');
       showToast('success', '已带入条款工作台', '预测值：' + currentDeal.forecastMonthlyRevenue);
     }
-

@@ -51,6 +51,34 @@
       }
       if (icon) icon.className = isFinancer ? 'fas fa-rotate-left text-xs' : 'fas fa-arrows-rotate text-xs';
       if (text) text.textContent = isFinancer ? '返回投资者视角' : '切换融资方视角';
+      const aiRecommendBtn = document.getElementById('aiRecommendBtn');
+      if (aiRecommendBtn) {
+        if (isFinancer) {
+          aiRecommendBtn.style.color = '#92400e';
+          aiRecommendBtn.style.background = 'rgba(245,158,11,0.10)';
+          aiRecommendBtn.style.border = '1px solid rgba(217,119,6,0.22)';
+        } else {
+          aiRecommendBtn.style.color = '#49A89A';
+          aiRecommendBtn.style.background = 'rgba(93,196,179,0.06)';
+          aiRecommendBtn.style.border = '1px solid rgba(93,196,179,0.12)';
+        }
+      }
+      const navUserBtn = document.getElementById('navUserBtn');
+      if (navUserBtn) {
+        navUserBtn.setAttribute('onmouseover', isFinancer
+          ? "this.style.background='rgba(245,158,11,0.12)'"
+          : "this.style.background='rgba(93,196,179,0.08)'");
+      }
+      const navAvatar = document.getElementById('navAvatar');
+      const ddAvatar = document.getElementById('ddAvatar');
+      const avatarBg = isFinancer
+        ? 'linear-gradient(135deg, #f59e0b, #b45309)'
+        : 'linear-gradient(135deg, #5DC4B3, #3D8F83)';
+      if (navAvatar) {
+        navAvatar.style.background = avatarBg;
+        navAvatar.style.boxShadow = isFinancer ? '0 2px 8px rgba(245,158,11,0.30)' : '0 2px 8px rgba(93,196,179,0.3)';
+      }
+      if (ddAvatar) ddAvatar.style.background = avatarBg;
 
       const heroSubtitle = document.getElementById('heroSubtitle');
       if (heroSubtitle) {
@@ -66,6 +94,7 @@
       }
       const role = document.getElementById('ddRole');
       if (role) role.textContent = isFinancer ? '融资方视角' : '投资者';
+      setDashboardViewMode(dashboardViewMode);
     }
 
     function playPerspectiveFlip() {
@@ -130,17 +159,24 @@
       dashboardViewMode = mode;
       const storeBtn = document.getElementById('viewModeStore');
       const brandBtn = document.getElementById('viewModeBrand');
+      const activeBg = currentPerspective === 'financer' ? 'bg-amber-50' : 'bg-teal-50';
+      const activeText = currentPerspective === 'financer' ? 'text-amber-700' : 'text-teal-700';
+      const reset = ['bg-teal-50', 'text-teal-700', 'bg-amber-50', 'text-amber-700', 'text-gray-600', 'hover:bg-gray-50'];
       if (storeBtn) {
-        storeBtn.classList.toggle('bg-teal-50', mode === 'store');
-        storeBtn.classList.toggle('text-teal-700', mode === 'store');
-        storeBtn.classList.toggle('text-gray-600', mode !== 'store');
-        storeBtn.classList.toggle('hover:bg-gray-50', mode !== 'store');
+        reset.forEach((c) => storeBtn.classList.remove(c));
+        if (mode === 'store') {
+          storeBtn.classList.add(activeBg, activeText);
+        } else {
+          storeBtn.classList.add('text-gray-600', 'hover:bg-gray-50');
+        }
       }
       if (brandBtn) {
-        brandBtn.classList.toggle('bg-teal-50', mode === 'brand');
-        brandBtn.classList.toggle('text-teal-700', mode === 'brand');
-        brandBtn.classList.toggle('text-gray-600', mode !== 'brand');
-        brandBtn.classList.toggle('hover:bg-gray-50', mode !== 'brand');
+        reset.forEach((c) => brandBtn.classList.remove(c));
+        if (mode === 'brand') {
+          brandBtn.classList.add(activeBg, activeText);
+        } else {
+          brandBtn.classList.add('text-gray-600', 'hover:bg-gray-50');
+        }
       }
       renderDeals();
     }

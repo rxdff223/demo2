@@ -193,7 +193,7 @@ export const MAIN_HTML = `
           <button onclick="showOnboarding()" class="tooltip flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all" style="color: #6b7280; background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.06);" data-tip="新手引导"><i class="fas fa-question-circle text-xs"></i><span>帮助</span></button>
           <div class="h-5 mx-0.5" style="width: 1px; background: rgba(0,0,0,0.08);"></div>
           <button id="perspectiveToggleBtn" onclick="togglePerspective()" class="tooltip flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all" style="color: #a16207; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.16);" data-tip="视角切换"><i id="perspectiveToggleIcon" class="fas fa-arrows-rotate text-xs"></i><span id="perspectiveToggleText">切换融资方视角</span></button>
-          <button onclick="showToast('info','AI推荐引擎','正在基于您的筛子偏好生成推荐')" class="tooltip flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all" style="color: #49A89A; background: rgba(93,196,179,0.06); border: 1px solid rgba(93,196,179,0.12);" data-tip="AI推荐"><i class="fas fa-robot"></i><span>推荐</span></button>
+          <button id="aiRecommendBtn" onclick="showToast('info','AI推荐引擎','正在基于您的筛子偏好生成推荐')" class="tooltip flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all" style="color: #49A89A; background: rgba(93,196,179,0.06); border: 1px solid rgba(93,196,179,0.12);" data-tip="AI推荐"><i class="fas fa-robot"></i><span>推荐</span></button>
           <!-- User avatar -->
           <div class="pl-1.5 ml-0.5 relative">
             <button onclick="toggleUserDD(event)" id="navUserBtn" class="flex items-center space-x-2 px-2 py-1.5 rounded-full transition-all" style="background: rgba(0,0,0,0.02);" onmouseover="this.style.background='rgba(93,196,179,0.08)'" onmouseout="this.style.background='rgba(0,0,0,0.02)'">
@@ -219,8 +219,8 @@ export const MAIN_HTML = `
     <div id="dashboardContentSurface" class="flex-1 p-4">
       <div class="max-w-7xl mx-auto">
         <!-- Hero Banner -->
-        <div class="relative overflow-hidden rounded-2xl mb-5 p-6" style="background: linear-gradient(135deg, #0a2e2a 0%, #0f3d36 40%, #164e47 100%);">
-          <div class="absolute inset-0" style="background: radial-gradient(ellipse at 70% 30%, rgba(93,196,179,0.35) 0%, transparent 50%), radial-gradient(ellipse at 20% 80%, rgba(46,196,182,0.2) 0%, transparent 50%); pointer-events:none;"></div>
+        <div id="dashboardHero" class="relative overflow-hidden rounded-2xl mb-5 p-6" style="background: linear-gradient(135deg, #0a2e2a 0%, #0f3d36 40%, #164e47 100%);">
+          <div id="dashboardHeroGlow" class="absolute inset-0" style="background: radial-gradient(ellipse at 70% 30%, rgba(93,196,179,0.35) 0%, transparent 50%), radial-gradient(ellipse at 20% 80%, rgba(46,196,182,0.2) 0%, transparent 50%); pointer-events:none;"></div>
           <div class="relative z-10 flex items-center justify-between">
             <div>
               <h2 class="text-xl font-bold text-white mb-1" style="letter-spacing: -0.02em;" id="welcomeText">欢迎回来</h2>
@@ -315,7 +315,7 @@ export const MAIN_HTML = `
             </select>
           </div>
         </div>
-        <p class="text-[11px] text-gray-400 mb-3"><i class="fas fa-shield-check mr-1 text-teal-500"></i>资产定向搜索仅匹配 KYB 已认证项目</p>
+        <p class="text-[11px] text-gray-400 mb-3"><i class="fas fa-shield-check mr-1 dashboard-kyb-hint-icon text-teal-500"></i>资产定向搜索仅匹配 KYB 已认证项目</p>
 
         <!-- Deal Grid -->
         <div id="dealGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
