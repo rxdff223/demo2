@@ -419,8 +419,8 @@ app.get('/', (c) => {
     </div>
   </div>
 
-  <!-- ==================== Page 2: Deal Detail ==================== -->
-  <div id="pageDetail" class="page flex-col h-screen grid-bg">
+  <!-- ==================== Page 2: Project Session ==================== -->
+  <div id="pageProjectSession" class="page flex-col h-screen grid-bg">
     <nav class="px-4 py-2.5 flex-shrink-0">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-3">
@@ -438,14 +438,35 @@ app.get('/', (c) => {
         </div>
       </div>
     </nav>
-    <div class="flex flex-1 overflow-hidden">
-      <!-- Left: Deal Info -->
+
+    <!-- Session Tabs -->
+    <div class="px-4 pb-2 flex-shrink-0">
+      <div class="max-w-7xl mx-auto bg-white rounded-xl border border-gray-100 p-1 flex flex-wrap gap-1">
+        <button id="sessionTabBtn-research" onclick="switchSessionTab('research')" class="session-tab-btn px-3 py-2 rounded-lg text-xs font-semibold bg-teal-50 text-teal-700">
+          <i class="fas fa-book-open mr-1"></i>做功课
+        </button>
+        <button id="sessionTabBtn-workbench" onclick="switchSessionTab('workbench')" class="session-tab-btn px-3 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50">
+          <i class="fas fa-sliders-h mr-1"></i>条款工作台
+        </button>
+        <button id="sessionTabBtn-intent" onclick="switchSessionTab('intent')" class="session-tab-btn px-3 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50">
+          <i class="fas fa-hand-point-up mr-1"></i>表达意向
+        </button>
+        <button id="sessionTabBtn-negotiation" onclick="switchSessionTab('negotiation')" class="session-tab-btn px-3 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50">
+          <i class="fas fa-comments mr-1"></i>谈判
+        </button>
+        <button id="sessionTabBtn-timeline" onclick="switchSessionTab('timeline')" class="session-tab-btn px-3 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50">
+          <i class="fas fa-stream mr-1"></i>时间线
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab: 做功课 -->
+    <div id="sessionTab-research" class="flex flex-1 overflow-hidden">
       <div class="w-2/5 border-r border-gray-200 flex flex-col bg-white overflow-y-auto">
         <div class="p-5" id="detailLeft">
           <div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">加载中...</p></div>
         </div>
       </div>
-      <!-- Right: Analysis (筛子评估结果) -->
       <div class="w-3/5 flex flex-col bg-slate-50 overflow-y-auto">
         <div class="p-3 border-b border-gray-200 bg-white flex items-center justify-between">
           <div class="flex items-center space-x-2"><span class="text-sm font-semibold text-gray-700"><i class="fas fa-filter mr-1.5 text-cyan-500"></i>筛子评估报告</span></div>
@@ -457,6 +478,46 @@ app.get('/', (c) => {
         </div>
         <div class="flex-1 p-5" id="detailRight">
           <div class="text-center py-16 text-gray-400"><i class="fas fa-chart-area text-4xl mb-3 opacity-40"></i><p class="text-sm">选择一个项目查看筛子评估报告</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: 条款工作台 -->
+    <div id="sessionTab-workbench" class="hidden flex-1 overflow-y-auto p-5">
+      <div class="max-w-7xl mx-auto space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-100 p-5">
+          <h3 class="text-base font-bold text-gray-900 mb-2"><i class="fas fa-sliders-h mr-2 text-cyan-600"></i>条款工作台（即将接入）</h3>
+          <p class="text-sm text-gray-500">下一步将实现公共参数/私有预测/派生指标三区结构，以及金额、分成比例、触达月数的双向联动计算。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: 表达意向 -->
+    <div id="sessionTab-intent" class="hidden flex-1 overflow-y-auto p-5">
+      <div class="max-w-3xl mx-auto space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-100 p-5">
+          <h3 class="text-base font-bold text-gray-900 mb-2"><i class="fas fa-hand-point-up mr-2 text-teal-600"></i>表达意向（即将接入）</h3>
+          <p class="text-sm text-gray-500">下一步将实现结构化意向填写、摘要确认、融资方响应状态。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: 谈判 -->
+    <div id="sessionTab-negotiation" class="hidden flex-1 overflow-y-auto p-5">
+      <div class="max-w-7xl mx-auto space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-100 p-5">
+          <h3 class="text-base font-bold text-gray-900 mb-2"><i class="fas fa-comments mr-2 text-amber-600"></i>谈判（即将接入）</h3>
+          <p class="text-sm text-gray-500">下一步将实现提案/反提案/撤回、多方案对比、沟通纪要与邀请协作。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: 时间线 -->
+    <div id="sessionTab-timeline" class="hidden flex-1 overflow-y-auto p-5">
+      <div class="max-w-7xl mx-auto space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-100 p-5">
+          <h3 class="text-base font-bold text-gray-900 mb-2"><i class="fas fa-stream mr-2 text-indigo-600"></i>时间线（即将接入）</h3>
+          <p class="text-sm text-gray-500">下一步将实现全程操作留痕与历史版本回填到工作台。</p>
         </div>
       </div>
     </div>
@@ -497,6 +558,7 @@ app.get('/', (c) => {
     let dealsList = []; // 当前筛子过滤后的机会
     let currentDeal = null;
     let currentSieve = 'all'; // 当前选中的筛子
+    let currentSessionTab = 'research'; // 项目会话当前Tab
     let obStep = 0;
 
     // ==================== 筛子库（全量可用筛子）====================
@@ -690,6 +752,22 @@ app.get('/', (c) => {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       const page = document.getElementById(pageId); if (page) page.classList.add('active');
       const fab = document.getElementById('aiFab'); if (fab) fab.classList.toggle('hidden', pageId === 'pageAuth');
+    }
+
+    function switchSessionTab(tab) {
+      currentSessionTab = tab;
+      const tabs = ['research', 'workbench', 'intent', 'negotiation', 'timeline'];
+      tabs.forEach(t => {
+        const panel = document.getElementById('sessionTab-' + t);
+        const btn = document.getElementById('sessionTabBtn-' + t);
+        if (panel) panel.classList.toggle('hidden', t !== tab);
+        if (btn) {
+          btn.classList.toggle('bg-teal-50', t === tab);
+          btn.classList.toggle('text-teal-700', t === tab);
+          btn.classList.toggle('text-gray-600', t !== tab);
+          btn.classList.toggle('hover:bg-gray-50', t !== tab);
+        }
+      });
     }
 
     // ==================== Auth ====================
@@ -1144,7 +1222,8 @@ app.get('/', (c) => {
           '</div></div>' +
         '</div>';
 
-      switchPage('pageDetail');
+      switchPage('pageProjectSession');
+      switchSessionTab('research');
     }
 
     function goToDashboard() { switchPage('pageDashboard'); renderDeals(); }
