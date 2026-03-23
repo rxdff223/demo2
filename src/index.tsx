@@ -593,10 +593,72 @@ app.get('/', (c) => {
 
     <!-- Tab: 表达意向 -->
     <div id="sessionTab-intent" class="hidden flex-1 overflow-y-auto p-5">
-      <div class="max-w-3xl mx-auto space-y-4">
+      <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="bg-white rounded-2xl border border-gray-100 p-5">
-          <h3 class="text-base font-bold text-gray-900 mb-2"><i class="fas fa-hand-point-up mr-2 text-teal-600"></i>表达意向（即将接入）</h3>
-          <p class="text-sm text-gray-500">下一步将实现结构化意向填写、摘要确认、融资方响应状态。</p>
+          <h3 class="text-base font-bold text-gray-900 mb-4"><i class="fas fa-hand-point-up mr-2 text-teal-600"></i>结构化意向填写</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">投资类型</label>
+              <select id="intentInvestmentType" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" onchange="updateIntentAndPreview()">
+                <option value="RBF固定">RBF固定</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">金额区间</label>
+              <select id="intentAmountBand" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" onchange="updateIntentAndPreview()">
+                <option value="100-300">100万 - 300万</option>
+                <option value="300-500">300万 - 500万</option>
+                <option value="500-800">500万 - 800万</option>
+                <option value="800+">800万以上</option>
+                <option value="custom">自定义区间</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">自定义最小值（万）</label>
+                <input id="intentCustomMin" type="number" min="0" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="updateIntentAndPreview()">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">自定义最大值（万）</label>
+                <input id="intentCustomMax" type="number" min="0" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="updateIntentAndPreview()">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">核心关注点（可多选）</label>
+              <div class="grid grid-cols-2 gap-2 text-sm">
+                <label class="flex items-center gap-2 p-2 rounded-lg border border-gray-100"><input class="intent-concern" type="checkbox" value="现金流稳定性" onchange="updateIntentAndPreview()"><span>现金流稳定性</span></label>
+                <label class="flex items-center gap-2 p-2 rounded-lg border border-gray-100"><input class="intent-concern" type="checkbox" value="历史履约记录" onchange="updateIntentAndPreview()"><span>历史履约记录</span></label>
+                <label class="flex items-center gap-2 p-2 rounded-lg border border-gray-100"><input class="intent-concern" type="checkbox" value="分成比例上限" onchange="updateIntentAndPreview()"><span>分成比例上限</span></label>
+                <label class="flex items-center gap-2 p-2 rounded-lg border border-gray-100"><input class="intent-concern" type="checkbox" value="退出周期可控" onchange="updateIntentAndPreview()"><span>退出周期可控</span></label>
+                <label class="flex items-center gap-2 p-2 rounded-lg border border-gray-100"><input class="intent-concern" type="checkbox" value="门店扩张潜力" onchange="updateIntentAndPreview()"><span>门店扩张潜力</span></label>
+                <label class="flex items-center gap-2 p-2 rounded-lg border border-gray-100"><input class="intent-concern" type="checkbox" value="团队执行能力" onchange="updateIntentAndPreview()"><span>团队执行能力</span></label>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">备注（可选）</label>
+              <textarea id="intentNote" rows="3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="updateIntentAndPreview()" placeholder="补充您的关注点或谈判偏好"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="generateIntentSummary()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">生成意向摘要</button>
+              <button onclick="submitIntent()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700">确认并发送意向</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-file-signature mr-2 text-cyan-600"></i>意向摘要确认</h3>
+            <div id="intentSummaryBox" class="p-3 rounded-xl bg-gray-50 border border-gray-100 text-sm text-gray-500">尚未生成摘要。</div>
+          </div>
+          <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-reply mr-2 text-amber-600"></i>融资方响应</h3>
+            <div id="intentResponseBox" class="p-3 rounded-xl bg-amber-50 border border-amber-100 text-sm text-amber-700">尚未提交意向。</div>
+            <div class="grid grid-cols-2 gap-2 mt-3">
+              <button onclick="mockIntentResponse('accepted')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">模拟：接受沟通</button>
+              <button onclick="mockIntentResponse('rejected')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700">模拟：暂不考虑</button>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-2">验收说明：接受沟通后建议进入条款工作台；暂不考虑则项目留在列表待观察。</p>
+          </div>
         </div>
       </div>
     </div>
@@ -662,6 +724,7 @@ app.get('/', (c) => {
     let researchInputsByDeal = {}; // 做功课Tab中的营业额预估草稿
     let workbenchByDeal = {}; // 条款工作台（按项目存储）
     let workbenchDerivedByDeal = {}; // 条款派生指标快照
+    let intentByDeal = {}; // 表达意向（按项目存储）
     let obStep = 0;
 
     const INDUSTRY_COMPARABLES = {
@@ -906,6 +969,7 @@ app.get('/', (c) => {
         refreshWorkbenchPrefill();
         renderWorkbench();
       }
+      if (tab === 'intent') renderIntentTab();
     }
 
     function setDashboardViewMode(mode) {
@@ -944,6 +1008,178 @@ app.get('/', (c) => {
 
     function saveWorkbenchState() {
       localStorage.setItem('ec_workbenchByDeal', JSON.stringify(workbenchByDeal));
+    }
+
+    function saveIntentState() {
+      localStorage.setItem('ec_intentByDeal', JSON.stringify(intentByDeal));
+    }
+
+    function ensureIntentState() {
+      if (!currentDeal) return null;
+      const dealId = currentDeal.id;
+      if (intentByDeal[dealId]) return intentByDeal[dealId];
+      intentByDeal[dealId] = {
+        investmentType: 'RBF固定',
+        amountBand: '300-500',
+        customMin: '',
+        customMax: '',
+        concerns: [],
+        note: '',
+        summary: '',
+        submittedAt: '',
+        response: 'none'
+      };
+      saveIntentState();
+      return intentByDeal[dealId];
+    }
+
+    function getIntentAmountText(state) {
+      if (state.amountBand === 'custom') {
+        const min = parseWanValue(state.customMin);
+        const max = parseWanValue(state.customMax);
+        if (min > 0 && max > 0) return min.toFixed(0) + '万 - ' + max.toFixed(0) + '万';
+        return '自定义（待填写）';
+      }
+      if (state.amountBand === '800+') return '800万以上';
+      const parts = String(state.amountBand).split('-');
+      if (parts.length === 2) return parts[0] + '万 - ' + parts[1] + '万';
+      return state.amountBand;
+    }
+
+    function renderIntentSummaryAndResponse(state) {
+      const summaryBox = document.getElementById('intentSummaryBox');
+      const responseBox = document.getElementById('intentResponseBox');
+      if (summaryBox) summaryBox.textContent = state.summary || '尚未生成摘要。';
+      if (!responseBox) return;
+      if (!state.submittedAt) {
+        responseBox.className = 'p-3 rounded-xl bg-amber-50 border border-amber-100 text-sm text-amber-700';
+        responseBox.textContent = '尚未提交意向。';
+        return;
+      }
+      if (state.response === 'accepted') {
+        responseBox.className = 'p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-sm text-emerald-700';
+        responseBox.textContent = '融资方已接受沟通，可进入条款工作台继续推进。';
+        return;
+      }
+      if (state.response === 'rejected') {
+        responseBox.className = 'p-3 rounded-xl bg-rose-50 border border-rose-100 text-sm text-rose-700';
+        responseBox.textContent = '融资方暂不考虑，建议保留关注并等待后续窗口。';
+        return;
+      }
+      responseBox.className = 'p-3 rounded-xl bg-cyan-50 border border-cyan-100 text-sm text-cyan-700';
+      responseBox.textContent = '意向已发送，等待融资方响应。';
+    }
+
+    function renderIntentTab() {
+      if (!currentDeal) return;
+      const state = ensureIntentState();
+      if (!state) return;
+      const typeEl = document.getElementById('intentInvestmentType');
+      const bandEl = document.getElementById('intentAmountBand');
+      const minEl = document.getElementById('intentCustomMin');
+      const maxEl = document.getElementById('intentCustomMax');
+      const noteEl = document.getElementById('intentNote');
+      if (typeEl) typeEl.value = state.investmentType || 'RBF固定';
+      if (bandEl) bandEl.value = state.amountBand || '300-500';
+      if (minEl) minEl.value = state.customMin || '';
+      if (maxEl) maxEl.value = state.customMax || '';
+      if (noteEl) noteEl.value = state.note || '';
+      document.querySelectorAll('.intent-concern').forEach((el) => {
+        const checkbox = el;
+        checkbox.checked = state.concerns.includes(checkbox.value);
+      });
+      renderIntentSummaryAndResponse(state);
+    }
+
+    function updateIntentAndPreview() {
+      if (!currentDeal) return;
+      const state = ensureIntentState();
+      if (!state) return;
+      state.investmentType = document.getElementById('intentInvestmentType')?.value || 'RBF固定';
+      state.amountBand = document.getElementById('intentAmountBand')?.value || '300-500';
+      state.customMin = document.getElementById('intentCustomMin')?.value || '';
+      state.customMax = document.getElementById('intentCustomMax')?.value || '';
+      state.note = document.getElementById('intentNote')?.value || '';
+      state.concerns = Array.from(document.querySelectorAll('.intent-concern:checked')).map((el) => el.value);
+      saveIntentState();
+      renderIntentSummaryAndResponse(state);
+    }
+
+    function generateIntentSummary() {
+      if (!currentDeal) return;
+      updateIntentAndPreview();
+      const state = ensureIntentState();
+      if (!state) return;
+      if (state.amountBand === 'custom') {
+        const min = parseWanValue(state.customMin);
+        const max = parseWanValue(state.customMax);
+        if (!(min > 0 && max > 0 && max >= min)) {
+          showToast('warning', '自定义区间无效', '请填写有效金额区间（最大值需>=最小值）');
+          return;
+        }
+      }
+      const concernsText = state.concerns.length > 0 ? state.concerns.join('、') : '暂无额外关注点';
+      const noteText = state.note ? '备注：' + state.note : '备注：无';
+      state.summary =
+        '项目：' + currentDeal.name +
+        '；投资类型：' + state.investmentType +
+        '；意向金额：' + getIntentAmountText(state) +
+        '；核心关注：' + concernsText +
+        '；参考：AI评分' + currentDeal.aiScore + ' / 风控' + (currentDeal.riskGrade || 'N/A') +
+        '；' + noteText;
+      saveIntentState();
+      renderIntentSummaryAndResponse(state);
+      showToast('success', '摘要已生成', '请确认后发送给融资方');
+    }
+
+    function submitIntent() {
+      if (!currentDeal) return;
+      const state = ensureIntentState();
+      if (!state) return;
+      if (!state.summary) {
+        generateIntentSummary();
+        if (!state.summary) return;
+      }
+      state.submittedAt = new Date().toISOString();
+      state.response = 'pending';
+      currentDeal.status = 'interested';
+      const original = allDeals.find(d => d.id === currentDeal.id);
+      if (original) original.status = 'interested';
+      localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
+      saveIntentState();
+      renderIntentSummaryAndResponse(state);
+      showToast('success', '意向已发送', '融资方将收到结构化意向摘要');
+    }
+
+    function mockIntentResponse(status) {
+      if (!currentDeal) return;
+      const state = ensureIntentState();
+      if (!state || !state.submittedAt) {
+        showToast('warning', '尚未提交意向', '请先完成意向发送');
+        return;
+      }
+      if (status === 'accepted') {
+        state.response = 'accepted';
+        currentDeal.status = 'interested';
+        const original = allDeals.find(d => d.id === currentDeal.id);
+        if (original) original.status = 'interested';
+        localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
+        saveIntentState();
+        renderIntentSummaryAndResponse(state);
+        showToast('success', '融资方接受沟通', '已进入条款工作台');
+        switchSessionTab('workbench');
+        return;
+      }
+      if (status === 'rejected') {
+        state.response = 'rejected';
+        currentDeal.status = 'open';
+        const original = allDeals.find(d => d.id === currentDeal.id);
+        if (original) original.status = 'open';
+        localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
+        saveIntentState();
+        renderIntentSummaryAndResponse(state);
+        showToast('info', '融资方暂不考虑', '项目已回到待参与状态');
+      }
     }
 
     function ensureWorkbenchState() {
@@ -1664,10 +1900,10 @@ app.get('/', (c) => {
         btn.innerHTML = '<i class="fas fa-check-double mr-1"></i>已确认参与';
         btn.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
       } else if (currentDeal.status === 'interested') {
-        btn.innerHTML = '<i class="fas fa-arrow-right mr-1"></i>确认参与';
-        btn.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+        btn.innerHTML = '<i class="fas fa-file-signature mr-1"></i>查看意向';
+        btn.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)';
       } else {
-        btn.innerHTML = '<i class="fas fa-hand-point-up mr-1"></i>我要参与';
+        btn.innerHTML = '<i class="fas fa-hand-point-up mr-1"></i>表达意向';
         btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
       }
 
@@ -1797,21 +2033,12 @@ app.get('/', (c) => {
 
     function expressIntent() {
       if (!currentDeal) return;
-      if (currentDeal.status === 'open') {
-        currentDeal.status = 'interested';
-        showToast('success', '意向已提交', currentDeal.name + ' — 发起方将收到通知');
-      } else if (currentDeal.status === 'interested') {
-        currentDeal.status = 'confirmed';
-        showToast('success', '参与已确认', currentDeal.name + ' — 即将进入条款通');
-      } else {
+      if (currentDeal.status === 'confirmed') {
         showToast('info', '已确认参与', '此项目已在条款通处理中');
         return;
       }
-      // 同步回 allDeals
-      const original = allDeals.find(d => d.id === currentDeal.id);
-      if (original) original.status = currentDeal.status;
-      localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
-      openDetail(currentDeal.id);
+      switchSessionTab('intent');
+      showToast('info', '进入表达意向', '请先填写结构化意向并确认发送');
     }
 
     function switchDetailView(view) {
@@ -1908,6 +2135,8 @@ app.get('/', (c) => {
       if (savedResearch) { try { researchInputsByDeal = JSON.parse(savedResearch); } catch(e) {} }
       const savedWorkbench = localStorage.getItem('ec_workbenchByDeal');
       if (savedWorkbench) { try { workbenchByDeal = JSON.parse(savedWorkbench); } catch(e) {} }
+      const savedIntent = localStorage.getItem('ec_intentByDeal');
+      if (savedIntent) { try { intentByDeal = JSON.parse(savedIntent); } catch(e) {} }
     }
 
     document.addEventListener('DOMContentLoaded', initApp);
