@@ -507,9 +507,86 @@ app.get('/', (c) => {
     <div id="sessionTab-workbench" class="hidden flex-1 overflow-y-auto p-5">
       <div class="max-w-7xl mx-auto space-y-4">
         <div class="bg-white rounded-2xl border border-gray-100 p-5">
-          <h3 class="text-base font-bold text-gray-900 mb-2"><i class="fas fa-sliders-h mr-2 text-cyan-600"></i>条款工作台（即将接入）</h3>
-          <p class="text-sm text-gray-500">下一步将实现公共参数/私有预测/派生指标三区结构，以及金额、分成比例、触达月数的双向联动计算。</p>
+          <h3 class="text-base font-bold text-gray-900 mb-2"><i class="fas fa-sliders-h mr-2 text-cyan-600"></i>RBF 条款工作台</h3>
+          <p class="text-sm text-gray-500">三区分离：公共条款（双方可见）/ 私有预测（仅自己可见）/ 派生指标（仅自己可见）。</p>
           <p class="text-xs text-cyan-700 mt-3 p-2.5 rounded-lg bg-cyan-50 border border-cyan-100" id="workbenchPrefillHint">暂无从做功课带入的营业额预估值。</p>
+        </div>
+
+        <div id="workbenchPanel" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="bg-white rounded-2xl border border-gray-100 p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-bold text-gray-800"><i class="fas fa-eye mr-1.5 text-gray-500"></i>公共条款区</h4>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-gray-100 text-gray-500">双方可见</span>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">融资金额（万）</label>
+                <input id="wbAmount" type="number" min="1" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="updateWorkbenchAndRecalc()">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">分成比例（%）</label>
+                <input id="wbShare" type="number" step="0.1" min="0.1" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="updateWorkbenchAndRecalc()">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">YITO封顶APR（%）</label>
+                <input id="wbApr" type="number" step="0.1" min="0" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="updateWorkbenchAndRecalc()">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">合作期限（月）</label>
+                <input id="wbTerm" type="number" min="1" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="updateWorkbenchAndRecalc()">
+              </div>
+              <button onclick="submitWorkbenchProposal()" class="w-full mt-1 px-3 py-2 text-xs font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700">提交方案（草稿）</button>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-gray-100 p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-bold text-gray-800"><i class="fas fa-lock mr-1.5 text-indigo-500"></i>私有预测区</h4>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">仅自己可见</span>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">预测月均营业额来源</label>
+                <select id="wbRevenueSource" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" onchange="updateWorkbenchAndRecalc()">
+                  <option value="system">系统预估</option>
+                  <option value="borrower">融资方预估</option>
+                  <option value="self">自行填写</option>
+                  <option value="research">做功课预估</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">预测月均营业额（万）</label>
+                <input id="wbRevenue" type="number" step="0.1" min="0.1" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="updateWorkbenchAndRecalc()">
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="useResearchForecast()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-cyan-600 text-white hover:bg-cyan-700">使用做功课预估</button>
+                <button onclick="updateWorkbenchAndRecalc()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">刷新计算</button>
+              </div>
+              <p class="text-[11px] text-gray-400">提示：私有预测不会向融资方或下游系统透出。</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-gray-100 p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-bold text-gray-800"><i class="fas fa-function mr-1.5 text-amber-500"></i>派生指标区</h4>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-amber-50 text-amber-700">仅自己可见</span>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-100"><span class="text-gray-500">月回款</span><span id="wbMonthlyPayback" class="font-semibold text-gray-800">--</span></div>
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-100"><span class="text-gray-500">建议可融资金额上限</span><span id="wbSuggestAmount" class="font-semibold text-gray-800">--</span></div>
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-100"><span class="text-gray-500">建议分成比例</span><span id="wbSuggestShare" class="font-semibold text-gray-800">--</span></div>
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-100"><span class="text-gray-500">预估触达月数</span><span id="wbTouchMonths" class="font-semibold text-gray-800">--</span></div>
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-100"><span class="text-gray-500">YITO触达总回款</span><span id="wbTotalPayback" class="font-semibold text-gray-800">--</span></div>
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-100"><span class="text-gray-500">实际APR</span><span id="wbActualApr" class="font-semibold text-gray-800">--</span></div>
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-100"><span class="text-gray-500">回收倍数</span><span id="wbRecoveryMultiple" class="font-semibold text-gray-800">--</span></div>
+            </div>
+            <div class="grid grid-cols-1 gap-2 mt-3">
+              <button onclick="applySuggestedAmount()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">按公式倒推金额</button>
+              <button onclick="applySuggestedShare()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">按公式倒推比例</button>
+              <button onclick="applyForwardTouchMonths()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">按公式正推触达月数</button>
+            </div>
+            <p id="wbFormulaHint" class="text-[11px] text-gray-400 mt-2">公式状态：等待输入参数。</p>
+          </div>
         </div>
       </div>
     </div>
@@ -583,6 +660,8 @@ app.get('/', (c) => {
     let dashboardViewMode = 'store'; // store | brand
     let currentSessionTab = 'research'; // 项目会话当前Tab
     let researchInputsByDeal = {}; // 做功课Tab中的营业额预估草稿
+    let workbenchByDeal = {}; // 条款工作台（按项目存储）
+    let workbenchDerivedByDeal = {}; // 条款派生指标快照
     let obStep = 0;
 
     const INDUSTRY_COMPARABLES = {
@@ -823,7 +902,10 @@ app.get('/', (c) => {
           btn.classList.toggle('hover:bg-gray-50', t !== tab);
         }
       });
-      if (tab === 'workbench') refreshWorkbenchPrefill();
+      if (tab === 'workbench') {
+        refreshWorkbenchPrefill();
+        renderWorkbench();
+      }
     }
 
     function setDashboardViewMode(mode) {
@@ -858,6 +940,219 @@ app.get('/', (c) => {
         .replace(/[^\\d.-]/g, '');
       const val = parseFloat(normalized);
       return Number.isFinite(val) ? val : 0;
+    }
+
+    function saveWorkbenchState() {
+      localStorage.setItem('ec_workbenchByDeal', JSON.stringify(workbenchByDeal));
+    }
+
+    function ensureWorkbenchState() {
+      if (!currentDeal) return null;
+      const dealId = currentDeal.id;
+      if (workbenchByDeal[dealId]) return workbenchByDeal[dealId];
+      const savedResearch = researchInputsByDeal[dealId];
+      const defaultRevenue = savedResearch?.predictedMonthlyRevenue || parseWanValue(currentDeal.monthlyRevenue) || 100;
+      workbenchByDeal[dealId] = {
+        publicAmountWan: Number((currentDeal.amount / 10000).toFixed(1)),
+        publicSharePct: parseFloat(String(currentDeal.revenueShare || '').replace('%', '')) || 10,
+        publicAprPct: 14,
+        publicTermMonths: parseInt(currentDeal.period, 10) || 24,
+        privateRevenueWan: Number(defaultRevenue.toFixed(1)),
+        privateSource: savedResearch?.predictedMonthlyRevenue ? 'research' : 'system'
+      };
+      saveWorkbenchState();
+      return workbenchByDeal[dealId];
+    }
+
+    function formatWan(v) {
+      return Number.isFinite(v) ? v.toFixed(1) + ' 万' : '--';
+    }
+
+    function formatPct(v) {
+      return Number.isFinite(v) ? v.toFixed(2) + '%' : '--';
+    }
+
+    function formatMonths(v) {
+      return Number.isFinite(v) ? v.toFixed(1) + ' 个月' : '--';
+    }
+
+    function setText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+
+    function computeWorkbenchDerived(state) {
+      const amountWan = state.publicAmountWan;
+      const sharePct = state.publicSharePct;
+      const aprPct = state.publicAprPct;
+      const termMonths = state.publicTermMonths;
+      const revenueWan = state.privateRevenueWan;
+
+      const shareRatio = sharePct / 100;
+      const aprRatio = aprPct / 100;
+      const monthlyPaybackWan = revenueWan * shareRatio;
+
+      const suggestAmountDen = 1 + (aprRatio * termMonths / 12);
+      const suggestedAmountWan = (monthlyPaybackWan > 0 && termMonths > 0 && suggestAmountDen > 0)
+        ? (monthlyPaybackWan * termMonths / suggestAmountDen)
+        : NaN;
+
+      const suggestedSharePct = (amountWan > 0 && revenueWan > 0 && termMonths > 0)
+        ? (amountWan * (1 + aprRatio * termMonths / 12) / (revenueWan * termMonths) * 100)
+        : NaN;
+
+      const touchDen = monthlyPaybackWan - amountWan * aprRatio / 12;
+      const touchMonths = (amountWan > 0 && touchDen > 0) ? (amountWan / touchDen) : NaN;
+
+      const validMonths = Number.isFinite(touchMonths) && touchMonths > 0 ? touchMonths : termMonths;
+      const totalPaybackWan = Number.isFinite(validMonths) && validMonths > 0 ? monthlyPaybackWan * validMonths : NaN;
+      const actualAprPct = (amountWan > 0 && Number.isFinite(totalPaybackWan) && validMonths > 0)
+        ? (((totalPaybackWan / amountWan) - 1) * 12 / validMonths * 100)
+        : NaN;
+      const recoveryMultiple = (amountWan > 0 && Number.isFinite(totalPaybackWan))
+        ? (totalPaybackWan / amountWan)
+        : NaN;
+
+      return {
+        monthlyPaybackWan,
+        suggestedAmountWan,
+        suggestedSharePct,
+        touchMonths,
+        totalPaybackWan,
+        actualAprPct,
+        recoveryMultiple,
+        touchDen
+      };
+    }
+
+    function recalcWorkbench() {
+      const state = ensureWorkbenchState();
+      if (!state || !currentDeal) return;
+      const derived = computeWorkbenchDerived(state);
+      workbenchDerivedByDeal[currentDeal.id] = derived;
+
+      setText('wbMonthlyPayback', formatWan(derived.monthlyPaybackWan));
+      setText('wbSuggestAmount', formatWan(derived.suggestedAmountWan));
+      setText('wbSuggestShare', formatPct(derived.suggestedSharePct));
+      setText('wbTouchMonths', formatMonths(derived.touchMonths));
+      setText('wbTotalPayback', formatWan(derived.totalPaybackWan));
+      setText('wbActualApr', formatPct(derived.actualAprPct));
+      setText('wbRecoveryMultiple', Number.isFinite(derived.recoveryMultiple) ? derived.recoveryMultiple.toFixed(2) + 'x' : '--');
+
+      if (derived.touchDen <= 0) {
+        setText('wbFormulaHint', '公式状态：当前参数下无法触达回本（分母<=0），建议提高分成比例或降低融资金额。');
+      } else {
+        setText('wbFormulaHint', '公式状态：已基于当前公共条款与私有预测完成倒推/正推计算。');
+      }
+    }
+
+    function renderWorkbench() {
+      if (!currentDeal) return;
+      const state = ensureWorkbenchState();
+      if (!state) return;
+      const amount = document.getElementById('wbAmount');
+      const share = document.getElementById('wbShare');
+      const apr = document.getElementById('wbApr');
+      const term = document.getElementById('wbTerm');
+      const revenue = document.getElementById('wbRevenue');
+      const source = document.getElementById('wbRevenueSource');
+      if (amount) amount.value = String(state.publicAmountWan);
+      if (share) share.value = String(state.publicSharePct);
+      if (apr) apr.value = String(state.publicAprPct);
+      if (term) term.value = String(state.publicTermMonths);
+      if (revenue) revenue.value = String(state.privateRevenueWan);
+      if (source) source.value = state.privateSource;
+      recalcWorkbench();
+    }
+
+    function updateWorkbenchAndRecalc() {
+      const state = ensureWorkbenchState();
+      if (!state) return;
+      state.publicAmountWan = parseWanValue(document.getElementById('wbAmount')?.value || state.publicAmountWan);
+      const share = parseFloat(document.getElementById('wbShare')?.value || String(state.publicSharePct));
+      const apr = parseFloat(document.getElementById('wbApr')?.value || String(state.publicAprPct));
+      const term = parseInt(document.getElementById('wbTerm')?.value || String(state.publicTermMonths), 10);
+      state.publicSharePct = Number.isFinite(share) ? share : state.publicSharePct;
+      state.publicAprPct = Number.isFinite(apr) ? apr : state.publicAprPct;
+      state.publicTermMonths = Number.isFinite(term) ? term : state.publicTermMonths;
+      state.privateRevenueWan = parseWanValue(document.getElementById('wbRevenue')?.value || state.privateRevenueWan);
+      const sourceVal = document.getElementById('wbRevenueSource')?.value || state.privateSource;
+      state.privateSource = sourceVal;
+      saveWorkbenchState();
+      recalcWorkbench();
+    }
+
+    function applySuggestedAmount() {
+      if (!currentDeal) return;
+      updateWorkbenchAndRecalc();
+      const derived = workbenchDerivedByDeal[currentDeal.id];
+      if (!derived || !Number.isFinite(derived.suggestedAmountWan) || derived.suggestedAmountWan <= 0) {
+        showToast('warning', '无法倒推金额', '请先检查营业额、比例、APR、期限参数。');
+        return;
+      }
+      const amount = document.getElementById('wbAmount');
+      if (amount) amount.value = derived.suggestedAmountWan.toFixed(1);
+      updateWorkbenchAndRecalc();
+      showToast('success', '已应用倒推金额', '公共融资金额已更新为建议值。');
+    }
+
+    function applySuggestedShare() {
+      if (!currentDeal) return;
+      updateWorkbenchAndRecalc();
+      const derived = workbenchDerivedByDeal[currentDeal.id];
+      if (!derived || !Number.isFinite(derived.suggestedSharePct) || derived.suggestedSharePct <= 0) {
+        showToast('warning', '无法倒推比例', '请先检查金额、营业额、APR、期限参数。');
+        return;
+      }
+      const share = document.getElementById('wbShare');
+      if (share) share.value = derived.suggestedSharePct.toFixed(2);
+      updateWorkbenchAndRecalc();
+      showToast('success', '已应用倒推比例', '公共分成比例已更新为建议值。');
+    }
+
+    function applyForwardTouchMonths() {
+      if (!currentDeal) return;
+      updateWorkbenchAndRecalc();
+      const derived = workbenchDerivedByDeal[currentDeal.id];
+      if (!derived || !Number.isFinite(derived.touchMonths) || derived.touchMonths <= 0) {
+        showToast('warning', '无法正推触达月数', '当前参数下分母<=0，请调整金额或比例。');
+        return;
+      }
+      const term = document.getElementById('wbTerm');
+      if (term) term.value = Math.max(1, Math.round(derived.touchMonths)).toString();
+      updateWorkbenchAndRecalc();
+      showToast('success', '已应用正推触达月数', '公共合作期限已同步为触达月数。');
+    }
+
+    function useResearchForecast() {
+      if (!currentDeal) return;
+      const saved = researchInputsByDeal[currentDeal.id];
+      if (!saved || !saved.predictedMonthlyRevenue) {
+        showToast('warning', '无可用预估', '请先在做功课中完成营业额预估。');
+        return;
+      }
+      const revenue = document.getElementById('wbRevenue');
+      const source = document.getElementById('wbRevenueSource');
+      if (revenue) revenue.value = saved.predictedMonthlyRevenue.toFixed(1);
+      if (source) source.value = 'research';
+      updateWorkbenchAndRecalc();
+      showToast('success', '已带入做功课预估', '私有预测月营收已更新。');
+    }
+
+    function submitWorkbenchProposal() {
+      if (!currentDeal) return;
+      updateWorkbenchAndRecalc();
+      const state = ensureWorkbenchState();
+      const drafts = JSON.parse(localStorage.getItem('ec_workbenchDrafts') || '{}');
+      drafts[currentDeal.id] = {
+        savedAt: new Date().toISOString(),
+        publicAmountWan: state.publicAmountWan,
+        publicSharePct: state.publicSharePct,
+        publicAprPct: state.publicAprPct,
+        publicTermMonths: state.publicTermMonths
+      };
+      localStorage.setItem('ec_workbenchDrafts', JSON.stringify(drafts));
+      showToast('success', '方案草稿已保存', '公共参数已记录，可在谈判Tab继续提交。');
     }
 
     function refreshWorkbenchPrefill() {
@@ -1340,9 +1635,14 @@ app.get('/', (c) => {
       currentDeal.forecastMonthlyRevenue = saved.predictedMonthlyRevenue.toFixed(1) + '万/月';
       const original = allDeals.find(d => d.id === currentDeal.id);
       if (original) original.forecastMonthlyRevenue = currentDeal.forecastMonthlyRevenue;
+      const wb = ensureWorkbenchState();
+      if (wb) {
+        wb.privateRevenueWan = Number(saved.predictedMonthlyRevenue.toFixed(1));
+        wb.privateSource = 'research';
+        saveWorkbenchState();
+      }
       localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
       switchSessionTab('workbench');
-      refreshWorkbenchPrefill();
       showToast('success', '已带入条款工作台', '预测值：' + currentDeal.forecastMonthlyRevenue);
     }
 
@@ -1606,6 +1906,8 @@ app.get('/', (c) => {
       if (saved) { try { allDeals = JSON.parse(saved); } catch(e) {} }
       const savedResearch = localStorage.getItem('ec_researchInputsByDeal');
       if (savedResearch) { try { researchInputsByDeal = JSON.parse(savedResearch); } catch(e) {} }
+      const savedWorkbench = localStorage.getItem('ec_workbenchByDeal');
+      if (savedWorkbench) { try { workbenchByDeal = JSON.parse(savedWorkbench); } catch(e) {} }
     }
 
     document.addEventListener('DOMContentLoaded', initApp);
