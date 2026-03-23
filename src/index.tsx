@@ -850,7 +850,13 @@ app.get('/', (c) => {
     }
 
     function parseWanValue(raw) {
-      const val = parseFloat(String(raw || '').replace(/[^\d.]/g, ''));
+      const normalized = String(raw || '')
+        .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 65248))
+        .replace(/．/g, '.')
+        .replace(/，/g, ',')
+        .replace(/,/g, '')
+        .replace(/[^\d.-]/g, '');
+      const val = parseFloat(normalized);
       return Number.isFinite(val) ? val : 0;
     }
 
@@ -1281,7 +1287,8 @@ app.get('/', (c) => {
 
     function runRevenueForecast() {
       if (!currentDeal) return;
-      const base = parseWanValue(document.getElementById('forecastBase')?.value);
+      const baseInput = document.getElementById('forecastBase');
+      const base = parseWanValue(baseInput ? baseInput.value : '');
       const growth = parseFloat(document.getElementById('forecastGrowth')?.value || '0');
       const seasonality = parseFloat(document.getElementById('forecastSeasonality')?.value || '0');
       if (!base || base <= 0) {
@@ -1447,7 +1454,7 @@ app.get('/', (c) => {
           '<div id="sectionForecast" class="bg-white rounded-2xl p-5 border border-gray-100">' +
             '<h3 class="text-sm font-bold text-gray-800 mb-4"><i class="fas fa-chart-line mr-1.5 text-teal-500"></i>营业额预估工作台</h3>' +
             '<div class="grid grid-cols-3 gap-3 mb-4">' +
-              '<div><label class="block text-xs text-gray-500 mb-1">月营收基准（万）</label><input id="forecastBase" type="number" min="1" value="' + defaultBase + '" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"></div>' +
+              '<div><label class="block text-xs text-gray-500 mb-1">月营收基准（万）</label><input id="forecastBase" type="text" inputmode="decimal" value="' + defaultBase + '" placeholder="例如 120.5" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"></div>' +
               '<div><label class="block text-xs text-gray-500 mb-1">增长率（%）</label><input id="forecastGrowth" type="number" value="' + defaultGrowth + '" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"></div>' +
               '<div><label class="block text-xs text-gray-500 mb-1">季节修正（%）</label><input id="forecastSeasonality" type="number" value="' + defaultSeasonality + '" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"></div>' +
             '</div>' +
