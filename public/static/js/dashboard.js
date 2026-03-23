@@ -28,6 +28,9 @@
         if (sortVal === 'amount_asc') return a.amount - b.amount;
         return (new Date(b.originateDate).getTime()) - (new Date(a.originateDate).getTime());
       });
+      if (currentPerspective === 'financer') {
+        filtered = filtered.slice(0, 2);
+      }
 
       // Update stats
       document.getElementById('statTotal').textContent = allDeals.length;

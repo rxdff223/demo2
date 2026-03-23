@@ -95,7 +95,7 @@
       const role = document.getElementById('ddRole');
       if (role) role.textContent = isFinancer ? '融资方视角' : '投资者';
       const listTitle = document.getElementById('dashboardListTitle');
-      if (listTitle) listTitle.textContent = isFinancer ? '融资' : '投资机会';
+      if (listTitle) listTitle.textContent = isFinancer ? '融资项目' : '投资机会';
       const filterLabel = document.getElementById('filterLabel');
       if (filterLabel) filterLabel.style.display = isFinancer ? 'none' : '';
       const kybHintLine = document.getElementById('kybHintLine');
