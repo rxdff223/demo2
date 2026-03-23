@@ -281,7 +281,7 @@ export const MAIN_HTML = `
         <!-- Filter Bar -->
         <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div class="flex items-center gap-2">
-            <h2 class="text-base font-bold text-gray-800">投资机会</h2>
+            <h2 id="dashboardListTitle" class="text-base font-bold text-gray-800">投资机会</h2>
             <span id="filterLabel" class="text-xs text-gray-400 font-medium">· 展示全部</span>
           </div>
           <div class="flex items-center gap-2">
@@ -315,7 +315,7 @@ export const MAIN_HTML = `
             </select>
           </div>
         </div>
-        <p class="text-[11px] text-gray-400 mb-3"><i class="fas fa-shield-check mr-1 dashboard-kyb-hint-icon text-teal-500"></i>资产定向搜索仅匹配 KYB 已认证项目</p>
+        <p id="kybHintLine" class="text-[11px] text-gray-400 mb-3"><i class="fas fa-shield-check mr-1 dashboard-kyb-hint-icon text-teal-500"></i>资产定向搜索仅匹配 KYB 已认证项目</p>
 
         <!-- Deal Grid -->
         <div id="dealGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
