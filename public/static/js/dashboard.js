@@ -33,7 +33,8 @@
       }
 
       // Update stats
-      document.getElementById('statTotal').textContent = allDeals.length;
+      const totalCount = currentPerspective === 'financer' ? filtered.length : allDeals.length;
+      document.getElementById('statTotal').textContent = String(totalCount);
       document.getElementById('statFiltered').textContent = dealsList.length;
       document.getElementById('statInterested').textContent = allDeals.filter(d => d.status === 'interested').length;
       document.getElementById('statConfirmed').textContent = allDeals.filter(d => d.status === 'confirmed').length;
