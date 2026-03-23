@@ -665,12 +665,69 @@ app.get('/', (c) => {
 
     <!-- Tab: 谈判 -->
     <div id="sessionTab-negotiation" class="hidden flex-1 overflow-y-auto p-5">
-      <div class="max-w-7xl mx-auto space-y-4">
-        <div class="bg-white rounded-2xl border border-gray-100 p-5">
-          <h3 class="text-base font-bold text-gray-900 mb-2"><i class="fas fa-comments mr-2 text-amber-600"></i>谈判（即将接入）</h3>
-          <p class="text-sm text-gray-500">下一步将实现提案/反提案/撤回、多方案对比、沟通纪要与邀请协作。</p>
+      <div class="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div class="xl:col-span-2 space-y-4">
+          <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-base font-bold text-gray-900"><i class="fas fa-comments mr-2 text-amber-600"></i>方案提交与谈判循环</h3>
+              <span id="negotiationGateTip" class="text-[11px] px-2 py-0.5 rounded bg-amber-50 text-amber-700">建议先完成表达意向</span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+              <div class="p-2.5 rounded-lg bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">融资金额</p><p id="negAmount" class="font-semibold text-gray-800">--</p></div>
+              <div class="p-2.5 rounded-lg bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">分成比例</p><p id="negShare" class="font-semibold text-gray-800">--</p></div>
+              <div class="p-2.5 rounded-lg bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">APR</p><p id="negApr" class="font-semibold text-gray-800">--</p></div>
+              <div class="p-2.5 rounded-lg bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">合作期限</p><p id="negTerm" class="font-semibold text-gray-800">--</p></div>
+            </div>
+            <div class="mt-3">
+              <label class="block text-xs text-gray-500 mb-1">提案备注</label>
+              <textarea id="negProposalNote" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="补充本次方案核心诉求"></textarea>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+              <button onclick="saveNegotiationDraft('A')" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">保存草稿A</button>
+              <button onclick="saveNegotiationDraft('B')" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">保存草稿B</button>
+              <button onclick="saveNegotiationDraft('C')" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">保存草稿C</button>
+              <button onclick="submitNegotiationProposalFromCurrent()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700">提交当前方案</button>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-layer-group mr-2 text-cyan-600"></i>多方案对比（A/B/C）</h3>
+            <div id="negDraftCompare" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-paper-plane mr-2 text-teal-600"></i>谈判记录</h3>
+            <div id="negProposalList" class="space-y-2 text-sm text-gray-600">暂无提案记录。</div>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-file-lines mr-2 text-indigo-600"></i>沟通纪要</h3>
+            <textarea id="negMemoInput" rows="4" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="记录线下会谈要点或争议点"></textarea>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <button onclick="submitNegotiationMemo('pending')" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">上传纪要（待确认）</button>
+              <button onclick="submitNegotiationMemo('confirmed')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">上传并确认纪要</button>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-user-plus mr-2 text-emerald-600"></i>邀请协作</h3>
+            <div class="space-y-2">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">角色</label>
+                <select id="negInviteRole" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                  <option value="negotiator">谈判者</option>
+                  <option value="observer">观察者</option>
+                </select>
+              </div>
+              <button onclick="generateNegotiationInvite()" class="w-full px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">生成7天有效邀请链接</button>
+              <div id="negInviteBox" class="p-2.5 rounded-lg bg-gray-50 border border-gray-100 text-xs text-gray-500">尚未生成邀请链接。</div>
+            </div>
+          </div>
         </div>
       </div>
+    </div>
     </div>
 
     <!-- Tab: 时间线 -->
@@ -725,6 +782,8 @@ app.get('/', (c) => {
     let workbenchByDeal = {}; // 条款工作台（按项目存储）
     let workbenchDerivedByDeal = {}; // 条款派生指标快照
     let intentByDeal = {}; // 表达意向（按项目存储）
+    let negotiationByDeal = {}; // 谈判状态（按项目存储）
+    let timelineByDeal = {}; // 时间线事件（按项目存储）
     let obStep = 0;
 
     const INDUSTRY_COMPARABLES = {
@@ -970,6 +1029,7 @@ app.get('/', (c) => {
         renderWorkbench();
       }
       if (tab === 'intent') renderIntentTab();
+      if (tab === 'negotiation') renderNegotiationTab();
     }
 
     function setDashboardViewMode(mode) {
@@ -1147,6 +1207,7 @@ app.get('/', (c) => {
       if (original) original.status = 'interested';
       localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
       saveIntentState();
+      pushTimelineEvent('intent_submitted', '提交结构化意向', getPublicTermsFromWorkbench());
       renderIntentSummaryAndResponse(state);
       showToast('success', '意向已发送', '融资方将收到结构化意向摘要');
     }
@@ -1165,6 +1226,7 @@ app.get('/', (c) => {
         if (original) original.status = 'interested';
         localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
         saveIntentState();
+        pushTimelineEvent('intent_accepted', '融资方接受沟通，进入正式谈判', getPublicTermsFromWorkbench());
         renderIntentSummaryAndResponse(state);
         showToast('success', '融资方接受沟通', '已进入条款工作台');
         switchSessionTab('workbench');
@@ -1177,9 +1239,371 @@ app.get('/', (c) => {
         if (original) original.status = 'open';
         localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
         saveIntentState();
+        pushTimelineEvent('intent_rejected', '融资方暂不考虑当前意向', getPublicTermsFromWorkbench());
         renderIntentSummaryAndResponse(state);
         showToast('info', '融资方暂不考虑', '项目已回到待参与状态');
       }
+    }
+
+    function saveNegotiationState() {
+      localStorage.setItem('ec_negotiationByDeal', JSON.stringify(negotiationByDeal));
+    }
+
+    function saveTimelineState() {
+      localStorage.setItem('ec_timelineByDeal', JSON.stringify(timelineByDeal));
+    }
+
+    function getPublicTermsFromWorkbench() {
+      const state = ensureWorkbenchState();
+      if (!state) return null;
+      return {
+        amountWan: Number(state.publicAmountWan),
+        sharePct: Number(state.publicSharePct),
+        aprPct: Number(state.publicAprPct),
+        termMonths: Number(state.publicTermMonths)
+      };
+    }
+
+    function ensureTimelineState() {
+      if (!currentDeal) return [];
+      const dealId = currentDeal.id;
+      if (!timelineByDeal[dealId]) timelineByDeal[dealId] = [];
+      return timelineByDeal[dealId];
+    }
+
+    function pushTimelineEvent(type, summary, publicTerms) {
+      if (!currentDeal) return;
+      const list = ensureTimelineState();
+      list.unshift({
+        id: 'E_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        at: new Date().toISOString(),
+        actor: currentUser?.displayName || currentUser?.username || '我方',
+        role: 'investor',
+        type,
+        summary,
+        publicTerms: publicTerms || null
+      });
+      saveTimelineState();
+    }
+
+    function ensureNegotiationState() {
+      if (!currentDeal) return null;
+      const dealId = currentDeal.id;
+      if (negotiationByDeal[dealId]) return negotiationByDeal[dealId];
+      negotiationByDeal[dealId] = {
+        drafts: { A: null, B: null, C: null },
+        proposals: [],
+        memos: [],
+        invite: null
+      };
+      saveNegotiationState();
+      return negotiationByDeal[dealId];
+    }
+
+    function applyPublicTermsToWorkbench(terms) {
+      if (!terms) return;
+      const wb = ensureWorkbenchState();
+      if (!wb) return;
+      wb.publicAmountWan = Number(terms.amountWan);
+      wb.publicSharePct = Number(terms.sharePct);
+      wb.publicAprPct = Number(terms.aprPct);
+      wb.publicTermMonths = Number(terms.termMonths);
+      saveWorkbenchState();
+      recalcWorkbench();
+      renderWorkbench();
+    }
+
+    function formatTermsInline(terms) {
+      if (!terms) return '--';
+      return '金额 ' + Number(terms.amountWan).toFixed(1) + '万 / 比例 ' + Number(terms.sharePct).toFixed(2) + '% / APR ' + Number(terms.aprPct).toFixed(2) + '% / 期限 ' + Number(terms.termMonths).toFixed(0) + '月';
+    }
+
+    function renderNegotiationDraftCompare(state) {
+      const box = document.getElementById('negDraftCompare');
+      if (!box) return;
+      box.innerHTML = ['A', 'B', 'C'].map((slot) => {
+        const draft = state.drafts[slot];
+        if (!draft) {
+          return '<div class="p-3 rounded-xl border border-dashed border-gray-200 bg-gray-50">' +
+            '<p class="text-sm font-semibold text-gray-700 mb-1">草稿' + slot + '</p>' +
+            '<p class="text-xs text-gray-400 mb-2">暂无内容</p>' +
+            '<button onclick="saveNegotiationDraft(&apos;' + slot + '&apos;)" class="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-white">保存当前参数</button>' +
+          '</div>';
+        }
+        return '<div class="p-3 rounded-xl border border-gray-100 bg-white">' +
+          '<p class="text-sm font-semibold text-gray-800 mb-1">草稿' + slot + '</p>' +
+          '<p class="text-xs text-gray-500 mb-2">' + formatTermsInline(draft.terms) + '</p>' +
+          '<p class="text-xs text-gray-400 mb-2">备注：' + (draft.note || '无') + '</p>' +
+          '<div class="grid grid-cols-2 gap-2">' +
+            '<button onclick="loadNegotiationDraft(&apos;' + slot + '&apos;)" class="px-2 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">加载</button>' +
+            '<button onclick="submitNegotiationProposalFromDraft(&apos;' + slot + '&apos;)" class="px-2 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700">提交</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function getProposalStatusText(status) {
+      if (status === 'pending') return '待响应';
+      if (status === 'accepted') return '已接受';
+      if (status === 'rejected') return '已拒绝';
+      if (status === 'countered') return '反提案';
+      if (status === 'withdrawn') return '已撤回';
+      if (status === 'agreed') return '条款达成';
+      return status || '未知';
+    }
+
+    function renderNegotiationProposals(state) {
+      const list = document.getElementById('negProposalList');
+      if (!list) return;
+      if (!state.proposals.length && !state.memos.length) {
+        list.textContent = '暂无提案记录。';
+        return;
+      }
+
+      const proposalHtml = state.proposals.map((p) => {
+        const actions = [];
+        if (p.status === 'pending') {
+          actions.push('<button onclick="respondNegotiation(&apos;' + p.id + '&apos;,&apos;accept&apos;)" class="px-2 py-1 text-[11px] rounded bg-emerald-600 text-white">模拟接受</button>');
+          actions.push('<button onclick="respondNegotiation(&apos;' + p.id + '&apos;,&apos;reject&apos;)" class="px-2 py-1 text-[11px] rounded bg-rose-600 text-white">模拟拒绝</button>');
+          actions.push('<button onclick="respondNegotiation(&apos;' + p.id + '&apos;,&apos;counter&apos;)" class="px-2 py-1 text-[11px] rounded bg-cyan-600 text-white">模拟反提案</button>');
+          actions.push('<button onclick="withdrawNegotiationProposal(&apos;' + p.id + '&apos;)" class="px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-700">撤回</button>');
+        } else if (p.status === 'accepted') {
+          actions.push('<button onclick="confirmNegotiationTerms(&apos;' + p.id + '&apos;)" class="px-2 py-1 text-[11px] rounded bg-teal-600 text-white">确认条款达成</button>');
+        } else if (p.status === 'countered' && p.counterTerms) {
+          actions.push('<button onclick="applyCounterProposal(&apos;' + p.id + '&apos;)" class="px-2 py-1 text-[11px] rounded bg-amber-600 text-white">采纳反提案到工作台</button>');
+        }
+
+        return '<div class="p-3 rounded-xl border border-gray-100 bg-gray-50">' +
+          '<div class="flex items-center justify-between mb-1"><p class="text-xs font-semibold text-gray-700">提案 ' + p.id + '</p><span class="text-[11px] px-2 py-0.5 rounded bg-white border border-gray-200 text-gray-600">' + getProposalStatusText(p.status) + '</span></div>' +
+          '<p class="text-xs text-gray-500 mb-1">' + formatTermsInline(p.terms) + '</p>' +
+          '<p class="text-xs text-gray-500 mb-1">备注：' + (p.note || '无') + '</p>' +
+          (p.counterTerms ? '<p class="text-xs text-cyan-700 mb-1">对方反提案：' + formatTermsInline(p.counterTerms) + '</p>' : '') +
+          (actions.length ? '<div class="flex flex-wrap gap-1 mt-2">' + actions.join('') + '</div>' : '') +
+        '</div>';
+      }).join('');
+
+      const memoHtml = state.memos.map((m) =>
+        '<div class="p-3 rounded-xl border border-indigo-100 bg-indigo-50">' +
+          '<p class="text-xs font-semibold text-indigo-700 mb-1">纪要 · ' + (m.status === 'confirmed' ? '已确认' : '待确认') + '</p>' +
+          '<p class="text-xs text-indigo-700">' + m.content + '</p>' +
+        '</div>'
+      ).join('');
+
+      list.innerHTML = proposalHtml + memoHtml;
+    }
+
+    function renderNegotiationTab() {
+      if (!currentDeal) return;
+      const state = ensureNegotiationState();
+      const intent = ensureIntentState();
+      const terms = getPublicTermsFromWorkbench();
+      const gate = document.getElementById('negotiationGateTip');
+      if (gate) {
+        if (intent && intent.response === 'accepted') {
+          gate.className = 'text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700';
+          gate.textContent = '已建联，可正式谈判';
+        } else {
+          gate.className = 'text-[11px] px-2 py-0.5 rounded bg-amber-50 text-amber-700';
+          gate.textContent = '建议先完成表达意向';
+        }
+      }
+      setText('negAmount', terms ? Number(terms.amountWan).toFixed(1) + '万' : '--');
+      setText('negShare', terms ? Number(terms.sharePct).toFixed(2) + '%' : '--');
+      setText('negApr', terms ? Number(terms.aprPct).toFixed(2) + '%' : '--');
+      setText('negTerm', terms ? Number(terms.termMonths).toFixed(0) + '月' : '--');
+      renderNegotiationDraftCompare(state);
+      renderNegotiationProposals(state);
+
+      const invite = document.getElementById('negInviteBox');
+      if (invite) {
+        if (state.invite) invite.textContent = '链接：' + state.invite.link + '（角色：' + (state.invite.role === 'negotiator' ? '谈判者' : '观察者') + '，有效期至 ' + state.invite.expiresAt.slice(0, 10) + '）';
+        else invite.textContent = '尚未生成邀请链接。';
+      }
+    }
+
+    function saveNegotiationDraft(slot) {
+      if (!currentDeal) return;
+      const state = ensureNegotiationState();
+      const terms = getPublicTermsFromWorkbench();
+      if (!terms) return;
+      const note = document.getElementById('negProposalNote')?.value || '';
+      state.drafts[slot] = { terms, note, updatedAt: new Date().toISOString() };
+      saveNegotiationState();
+      pushTimelineEvent('draft_saved', '保存谈判草稿' + slot, terms);
+      renderNegotiationTab();
+      showToast('success', '草稿已保存', '草稿' + slot + ' 已更新');
+    }
+
+    function loadNegotiationDraft(slot) {
+      if (!currentDeal) return;
+      const state = ensureNegotiationState();
+      const draft = state.drafts[slot];
+      if (!draft) {
+        showToast('warning', '草稿为空', '请先保存草稿' + slot);
+        return;
+      }
+      applyPublicTermsToWorkbench(draft.terms);
+      const noteEl = document.getElementById('negProposalNote');
+      if (noteEl) noteEl.value = draft.note || '';
+      renderNegotiationTab();
+      showToast('info', '已加载草稿', '草稿' + slot + ' 已加载到当前谈判参数');
+    }
+
+    function createNegotiationProposal(terms, note, source) {
+      if (!currentDeal) return null;
+      const state = ensureNegotiationState();
+      const proposal = {
+        id: 'P_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        createdAt: new Date().toISOString(),
+        source,
+        terms,
+        note: note || '',
+        status: 'pending',
+        counterTerms: null
+      };
+      state.proposals.unshift(proposal);
+      saveNegotiationState();
+      pushTimelineEvent('proposal_submitted', '提交谈判方案 ' + proposal.id, terms);
+      renderNegotiationTab();
+      return proposal;
+    }
+
+    function submitNegotiationProposalFromCurrent() {
+      if (!currentDeal) return;
+      const terms = getPublicTermsFromWorkbench();
+      if (!terms) return;
+      const note = document.getElementById('negProposalNote')?.value || '';
+      const proposal = createNegotiationProposal(terms, note, 'current');
+      if (proposal) showToast('success', '方案已提交', '提案编号：' + proposal.id);
+    }
+
+    function submitNegotiationProposalFromDraft(slot) {
+      if (!currentDeal) return;
+      const state = ensureNegotiationState();
+      const draft = state.drafts[slot];
+      if (!draft) {
+        showToast('warning', '草稿为空', '请先保存草稿' + slot);
+        return;
+      }
+      const proposal = createNegotiationProposal(draft.terms, draft.note || '', 'draft-' + slot);
+      if (proposal) showToast('success', '草稿已提交', '提案编号：' + proposal.id);
+    }
+
+    function findProposalById(proposalId) {
+      const state = ensureNegotiationState();
+      if (!state) return null;
+      return state.proposals.find((p) => p.id === proposalId) || null;
+    }
+
+    function respondNegotiation(proposalId, action) {
+      if (!currentDeal) return;
+      const proposal = findProposalById(proposalId);
+      if (!proposal || proposal.status !== 'pending') return;
+      if (action === 'accept') {
+        proposal.status = 'accepted';
+        pushTimelineEvent('proposal_accepted', '对方接受提案 ' + proposal.id, proposal.terms);
+        showToast('success', '对方已接受', '可点击“确认条款达成”完成锁定');
+      } else if (action === 'reject') {
+        proposal.status = 'rejected';
+        pushTimelineEvent('proposal_rejected', '对方拒绝提案 ' + proposal.id, proposal.terms);
+        showToast('info', '对方已拒绝', '可调整参数后重新提交');
+      } else if (action === 'counter') {
+        proposal.status = 'countered';
+        proposal.counterTerms = {
+          amountWan: Number((proposal.terms.amountWan * 0.95).toFixed(1)),
+          sharePct: Number((proposal.terms.sharePct + 0.6).toFixed(2)),
+          aprPct: Number(Math.max(0, proposal.terms.aprPct - 0.5).toFixed(2)),
+          termMonths: Number(Math.max(1, proposal.terms.termMonths + 2))
+        };
+        pushTimelineEvent('proposal_countered', '对方对提案 ' + proposal.id + ' 发起反提案', proposal.counterTerms);
+        showToast('info', '收到反提案', '可一键采纳到条款工作台继续谈判');
+      }
+      saveNegotiationState();
+      renderNegotiationTab();
+    }
+
+    function withdrawNegotiationProposal(proposalId) {
+      if (!currentDeal) return;
+      const proposal = findProposalById(proposalId);
+      if (!proposal || proposal.status !== 'pending') {
+        showToast('warning', '无法撤回', '仅“待响应”提案可撤回');
+        return;
+      }
+      proposal.status = 'withdrawn';
+      saveNegotiationState();
+      pushTimelineEvent('proposal_withdrawn', '撤回提案 ' + proposal.id, proposal.terms);
+      renderNegotiationTab();
+      showToast('info', '提案已撤回', proposal.id);
+    }
+
+    function applyCounterProposal(proposalId) {
+      if (!currentDeal) return;
+      const proposal = findProposalById(proposalId);
+      if (!proposal || !proposal.counterTerms) {
+        showToast('warning', '无可用反提案', '请先等待对方反提案');
+        return;
+      }
+      applyPublicTermsToWorkbench(proposal.counterTerms);
+      pushTimelineEvent('counter_loaded', '已将反提案 ' + proposal.id + ' 加载到工作台', proposal.counterTerms);
+      renderNegotiationTab();
+      showToast('success', '反提案已加载', '请确认后再次提交方案');
+    }
+
+    function confirmNegotiationTerms(proposalId) {
+      if (!currentDeal) return;
+      const proposal = findProposalById(proposalId);
+      if (!proposal || proposal.status !== 'accepted') {
+        showToast('warning', '无法确认', '仅已接受提案可确认达成');
+        return;
+      }
+      proposal.status = 'agreed';
+      currentDeal.status = 'confirmed';
+      const original = allDeals.find(d => d.id === currentDeal.id);
+      if (original) original.status = 'confirmed';
+      localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
+      saveNegotiationState();
+      pushTimelineEvent('terms_confirmed', '提案 ' + proposal.id + ' 已达成并锁定公共条款', proposal.terms);
+      renderNegotiationTab();
+      showToast('success', '条款已达成', '项目状态已更新为已确认');
+    }
+
+    function submitNegotiationMemo(status) {
+      if (!currentDeal) return;
+      const state = ensureNegotiationState();
+      const input = document.getElementById('negMemoInput');
+      const text = (input?.value || '').trim();
+      if (!text) {
+        showToast('warning', '纪要为空', '请先填写纪要内容');
+        return;
+      }
+      state.memos.unshift({
+        id: 'M_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        at: new Date().toISOString(),
+        content: text,
+        status
+      });
+      if (input) input.value = '';
+      saveNegotiationState();
+      pushTimelineEvent('memo_uploaded', '上传谈判纪要（' + (status === 'confirmed' ? '已确认' : '待确认') + '）', getPublicTermsFromWorkbench());
+      renderNegotiationTab();
+      showToast('success', '纪要已记录', status === 'confirmed' ? '纪要已确认并同步公共条款' : '等待双方确认纪要');
+    }
+
+    function generateNegotiationInvite() {
+      if (!currentDeal) return;
+      const state = ensureNegotiationState();
+      const role = document.getElementById('negInviteRole')?.value || 'negotiator';
+      const token = Math.random().toString(36).slice(2, 10);
+      const expiresAt = new Date(Date.now() + 7 * 86400000).toISOString();
+      state.invite = {
+        role,
+        link: 'https://deal-connect.local/invite/' + token,
+        expiresAt
+      };
+      saveNegotiationState();
+      pushTimelineEvent('invite_created', '创建协作邀请（' + (role === 'negotiator' ? '谈判者' : '观察者') + '）', getPublicTermsFromWorkbench());
+      renderNegotiationTab();
+      showToast('success', '邀请链接已生成', '有效期至 ' + expiresAt.slice(0, 10));
     }
 
     function ensureWorkbenchState() {
@@ -2137,6 +2561,10 @@ app.get('/', (c) => {
       if (savedWorkbench) { try { workbenchByDeal = JSON.parse(savedWorkbench); } catch(e) {} }
       const savedIntent = localStorage.getItem('ec_intentByDeal');
       if (savedIntent) { try { intentByDeal = JSON.parse(savedIntent); } catch(e) {} }
+      const savedNegotiation = localStorage.getItem('ec_negotiationByDeal');
+      if (savedNegotiation) { try { negotiationByDeal = JSON.parse(savedNegotiation); } catch(e) {} }
+      const savedTimeline = localStorage.getItem('ec_timelineByDeal');
+      if (savedTimeline) { try { timelineByDeal = JSON.parse(savedTimeline); } catch(e) {} }
     }
 
     document.addEventListener('DOMContentLoaded', initApp);
