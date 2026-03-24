@@ -33,11 +33,14 @@
     function renderIntentSummaryAndResponse(state) {
       const summaryBox = document.getElementById('intentSummaryBox');
       const responseBox = document.getElementById('intentResponseBox');
-      if (summaryBox) summaryBox.textContent = state.summary || '尚未生成摘要。';
+      if (summaryBox) {
+        if (state.summary) summaryBox.textContent = state.summary;
+        else summaryBox.textContent = currentPerspective === 'financer' ? '尚未收到投资方提交的结构化意向。' : '尚未生成摘要。';
+      }
       if (!responseBox) return;
       if (!state.submittedAt) {
         responseBox.className = 'p-3 rounded-xl bg-amber-50 border border-amber-100 text-sm text-amber-700';
-        responseBox.textContent = '尚未提交意向。';
+        responseBox.textContent = currentPerspective === 'financer' ? '当前暂无投资方意向待处理。' : '尚未提交意向。';
         return;
       }
       if (state.response === 'accepted') {
@@ -51,7 +54,49 @@
         return;
       }
       responseBox.className = 'p-3 rounded-xl bg-cyan-50 border border-cyan-100 text-sm text-cyan-700';
-      responseBox.textContent = '意向已发送，等待融资方响应。';
+      responseBox.textContent = currentPerspective === 'financer' ? '已收到投资方意向，请选择处理结果。' : '意向已发送，等待融资方响应。';
+    }
+
+    function renderIntentPerspective(state) {
+      const isFinancer = currentPerspective === 'financer';
+      const formTitle = document.getElementById('intentFormTitle');
+      const summaryTitle = document.getElementById('intentSummaryTitle');
+      const responseTitle = document.getElementById('intentResponseTitle');
+      const formActions = document.getElementById('intentFormActions');
+      const responseActions = document.getElementById('intentResponseActions');
+      const responseTip = document.getElementById('intentResponseTip');
+      const acceptBtn = document.getElementById('btnIntentAccept');
+      const rejectBtn = document.getElementById('btnIntentReject');
+      if (formTitle) {
+        formTitle.innerHTML = isFinancer
+          ? '<i class="fas fa-inbox mr-2 text-amber-600"></i>融资方视角 · 收到意向详情'
+          : '<i class="fas fa-hand-point-up mr-2 text-teal-600"></i>结构化意向填写';
+      }
+      if (summaryTitle) {
+        summaryTitle.innerHTML = isFinancer
+          ? '<i class="fas fa-file-signature mr-2 text-cyan-600"></i>投资方意向摘要'
+          : '<i class="fas fa-file-signature mr-2 text-cyan-600"></i>意向摘要确认';
+      }
+      if (responseTitle) {
+        responseTitle.innerHTML = isFinancer
+          ? '<i class="fas fa-reply mr-2 text-amber-600"></i>处理结果'
+          : '<i class="fas fa-reply mr-2 text-amber-600"></i>融资方响应';
+      }
+      if (formActions) formActions.classList.toggle('hidden', isFinancer);
+      if (responseActions) {
+        const canHandle = isFinancer && !!state.submittedAt && state.response !== 'accepted' && state.response !== 'rejected';
+        responseActions.classList.toggle('hidden', !canHandle);
+      }
+      if (responseTip) {
+        responseTip.textContent = isFinancer
+          ? '处理后将自动记录到时间线，并同步更新项目状态。'
+          : '验收说明：接受沟通后建议进入条款工作台；暂不考虑则项目留在列表待观察。';
+      }
+      if (acceptBtn) acceptBtn.textContent = '接受沟通';
+      if (rejectBtn) rejectBtn.textContent = '暂不考虑';
+      document.querySelectorAll('#intentFormBody input, #intentFormBody select, #intentFormBody textarea').forEach((el) => {
+        el.disabled = isFinancer;
+      });
     }
 
     function renderIntentTab() {
@@ -72,11 +117,13 @@
         const checkbox = el;
         checkbox.checked = state.concerns.includes(checkbox.value);
       });
+      renderIntentPerspective(state);
       renderIntentSummaryAndResponse(state);
     }
 
     function updateIntentAndPreview() {
       if (!currentDeal) return;
+      if (currentPerspective === 'financer') return;
       const state = ensureIntentState();
       if (!state) return;
       state.investmentType = document.getElementById('intentInvestmentType')?.value || 'RBF固定';
@@ -91,6 +138,10 @@
 
     function generateIntentSummary() {
       if (!currentDeal) return;
+      if (currentPerspective === 'financer') {
+        showToast('warning', '当前为融资方视角', '融资方不可生成投资方意向摘要');
+        return;
+      }
       updateIntentAndPreview();
       const state = ensureIntentState();
       if (!state) return;
@@ -118,6 +169,10 @@
 
     function submitIntent() {
       if (!currentDeal) return;
+      if (currentPerspective === 'financer') {
+        showToast('warning', '当前为融资方视角', '融资方不可提交投资意向');
+        return;
+      }
       const state = ensureIntentState();
       if (!state) return;
       if (!state.summary) {
@@ -136,11 +191,15 @@
       showToast('success', '意向已发送', '融资方将收到结构化意向摘要');
     }
 
-    function mockIntentResponse(status) {
+    function handleIntentDecision(status) {
       if (!currentDeal) return;
+      if (currentPerspective !== 'financer') {
+        showToast('warning', '当前为投资方视角', '请切换到融资方视角后处理意向');
+        return;
+      }
       const state = ensureIntentState();
       if (!state || !state.submittedAt) {
-        showToast('warning', '尚未提交意向', '请先完成意向发送');
+        showToast('warning', '暂无意向可处理', '当前项目尚未收到投资方意向');
         return;
       }
       if (status === 'accepted') {
@@ -151,8 +210,9 @@
         localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
         saveIntentState();
         pushTimelineEvent('intent_accepted', '融资方接受沟通，进入正式谈判', getPublicTermsFromWorkbench());
+        renderIntentPerspective(state);
         renderIntentSummaryAndResponse(state);
-        showToast('success', '融资方接受沟通', '已进入条款工作台');
+        showToast('success', '已接受意向', '项目可继续进入条款工作台');
         switchSessionTab('workbench');
         return;
       }
@@ -164,8 +224,12 @@
         localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
         saveIntentState();
         pushTimelineEvent('intent_rejected', '融资方暂不考虑当前意向', getPublicTermsFromWorkbench());
+        renderIntentPerspective(state);
         renderIntentSummaryAndResponse(state);
-        showToast('info', '融资方暂不考虑', '项目已回到待参与状态');
+        showToast('info', '已拒绝当前意向', '项目已回到待参与状态');
       }
     }
 
+    function mockIntentResponse(status) {
+      handleIntentDecision(status);
+    }

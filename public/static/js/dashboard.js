@@ -69,6 +69,12 @@
         const subtitle = dashboardViewMode === 'brand'
           ? (d.companyName || d.originator || '融资主体') + ' · ' + d.industry + ' · ' + d.location
           : (d.brandName || '品牌') + ' · ' + d.industry + ' · ' + d.location;
+        const intentActionLabel = isFinancer
+          ? '处理意向'
+          : (d.status === 'interested' ? '已有意向' : d.status === 'confirmed' ? '已确认' : '表达意向');
+        const intentActionClass = isFinancer
+          ? 'text-amber-600'
+          : (d.status === 'interested' || d.status === 'confirmed' ? 'text-teal-600' : 'text-gray-400 hover:text-teal-600');
 
         return '<div class="project-card group cursor-pointer animate-fade-in" onclick="handleDealCardClick(\'' + d.id + '\')">' +
           // Header: name + status
@@ -104,7 +110,7 @@
             '<span class="text-xs text-gray-400"><i class="fas fa-paper-plane mr-1 text-amber-300"></i>' + d.originateDate + '</span>' +
             '<div class="flex items-center gap-3">' +
               '<button onclick="event.stopPropagation(); toggleSkip(\'' + d.id + '\')" class="text-xs font-medium ' + (d.skipped ? 'text-rose-600' : 'text-gray-400 hover:text-rose-600') + ' transition-colors"><i class="fas fa-forward mr-1"></i>' + (d.skipped ? '取消跳过' : '标记跳过') + '</button>' +
-              '<button onclick="event.stopPropagation(); toggleIntent(\'' + d.id + '\')" class="text-xs font-medium ' + (d.status === 'interested' || d.status === 'confirmed' ? 'text-teal-600' : 'text-gray-400 hover:text-teal-600') + ' transition-colors"><i class="fas fa-hand-point-up mr-1"></i>' + (d.status === 'interested' ? '已有意向' : d.status === 'confirmed' ? '已确认' : '表达意向') + '</button>' +
+              '<button onclick="event.stopPropagation(); toggleIntent(\'' + d.id + '\')" class="text-xs font-medium ' + intentActionClass + ' transition-colors"><i class="fas fa-hand-point-up mr-1"></i>' + intentActionLabel + '</button>' +
             '</div>' +
           '</div>' +
         '</div>';
@@ -168,6 +174,12 @@
     }
 
     function toggleIntent(id) {
+      if (currentPerspective === 'financer') {
+        openDetail(id);
+        switchSessionTab('intent');
+        showToast('info', '进入意向处理', '请查看投资方意向摘要并处理响应');
+        return;
+      }
       const deal = allDeals.find(d => d.id === id);
       if (!deal) return;
       if (deal.status === 'open') { deal.status = 'interested'; showToast('success', '已表达意向', deal.name); }

@@ -607,9 +607,9 @@ export const MAIN_HTML = `
     <!-- Tab: 表达意向 -->
     <div id="sessionTab-intent" class="hidden flex-1 overflow-y-auto p-5">
       <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="bg-white rounded-2xl border border-gray-100 p-5">
-          <h3 class="text-base font-bold text-gray-900 mb-4"><i class="fas fa-hand-point-up mr-2 text-teal-600"></i>结构化意向填写</h3>
-          <div class="space-y-3">
+        <div id="intentFormCard" class="bg-white rounded-2xl border border-gray-100 p-5">
+          <h3 id="intentFormTitle" class="text-base font-bold text-gray-900 mb-4"><i class="fas fa-hand-point-up mr-2 text-teal-600"></i>结构化意向填写</h3>
+          <div id="intentFormBody" class="space-y-3">
             <div>
               <label class="block text-xs text-gray-500 mb-1">投资类型</label>
               <select id="intentInvestmentType" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" onchange="updateIntentAndPreview()">
@@ -651,7 +651,7 @@ export const MAIN_HTML = `
               <label class="block text-xs text-gray-500 mb-1">备注（可选）</label>
               <textarea id="intentNote" rows="3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="updateIntentAndPreview()" placeholder="补充您的关注点或谈判偏好"></textarea>
             </div>
-            <div class="grid grid-cols-2 gap-2">
+            <div id="intentFormActions" class="grid grid-cols-2 gap-2">
               <button onclick="generateIntentSummary()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">生成意向摘要</button>
               <button onclick="submitIntent()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700">确认并发送意向</button>
             </div>
@@ -660,17 +660,17 @@ export const MAIN_HTML = `
 
         <div class="space-y-4">
           <div class="bg-white rounded-2xl border border-gray-100 p-5">
-            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-file-signature mr-2 text-cyan-600"></i>意向摘要确认</h3>
+            <h3 id="intentSummaryTitle" class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-file-signature mr-2 text-cyan-600"></i>意向摘要确认</h3>
             <div id="intentSummaryBox" class="p-3 rounded-xl bg-gray-50 border border-gray-100 text-sm text-gray-500">尚未生成摘要。</div>
           </div>
           <div class="bg-white rounded-2xl border border-gray-100 p-5">
-            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-reply mr-2 text-amber-600"></i>融资方响应</h3>
+            <h3 id="intentResponseTitle" class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-reply mr-2 text-amber-600"></i>融资方响应</h3>
             <div id="intentResponseBox" class="p-3 rounded-xl bg-amber-50 border border-amber-100 text-sm text-amber-700">尚未提交意向。</div>
-            <div class="grid grid-cols-2 gap-2 mt-3">
-              <button onclick="mockIntentResponse('accepted')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">模拟：接受沟通</button>
-              <button onclick="mockIntentResponse('rejected')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700">模拟：暂不考虑</button>
+            <div id="intentResponseActions" class="grid grid-cols-2 gap-2 mt-3">
+              <button id="btnIntentAccept" onclick="mockIntentResponse('accepted')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">接受沟通</button>
+              <button id="btnIntentReject" onclick="mockIntentResponse('rejected')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700">暂不考虑</button>
             </div>
-            <p class="text-[11px] text-gray-400 mt-2">验收说明：接受沟通后建议进入条款工作台；暂不考虑则项目留在列表待观察。</p>
+            <p id="intentResponseTip" class="text-[11px] text-gray-400 mt-2">验收说明：接受沟通后建议进入条款工作台；暂不考虑则项目留在列表待观察。</p>
           </div>
         </div>
       </div>

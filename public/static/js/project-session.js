@@ -12,15 +12,20 @@
 
       // 更新参与按钮
       const btn = document.getElementById('btnExpressIntent');
-      if (currentDeal.status === 'confirmed') {
-        btn.innerHTML = '<i class="fas fa-check-double mr-1"></i>已确认参与';
-        btn.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
-      } else if (currentDeal.status === 'interested') {
-        btn.innerHTML = '<i class="fas fa-file-signature mr-1"></i>查看意向';
-        btn.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)';
+      if (currentPerspective === 'financer') {
+        btn.innerHTML = '<i class="fas fa-inbox mr-1"></i>处理意向';
+        btn.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
       } else {
-        btn.innerHTML = '<i class="fas fa-hand-point-up mr-1"></i>表达意向';
-        btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        if (currentDeal.status === 'confirmed') {
+          btn.innerHTML = '<i class="fas fa-check-double mr-1"></i>已确认参与';
+          btn.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+        } else if (currentDeal.status === 'interested') {
+          btn.innerHTML = '<i class="fas fa-file-signature mr-1"></i>查看意向';
+          btn.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)';
+        } else {
+          btn.innerHTML = '<i class="fas fa-hand-point-up mr-1"></i>表达意向';
+          btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        }
       }
 
       // Left panel — 项目信息（来自发起通）
@@ -135,12 +140,16 @@
 
     function expressIntent() {
       if (!currentDeal) return;
-      if (currentDeal.status === 'confirmed') {
+      if (currentPerspective !== 'financer' && currentDeal.status === 'confirmed') {
         showToast('info', '已确认参与', '此项目已在条款通处理中');
         return;
       }
       switchSessionTab('intent');
-      showToast('info', '进入表达意向', '请先填写结构化意向并确认发送');
+      if (currentPerspective === 'financer') {
+        showToast('info', '进入意向处理', '请查看投资方意向摘要并处理响应');
+      } else {
+        showToast('info', '进入表达意向', '请先填写结构化意向并确认发送');
+      }
     }
 
     function switchDetailView(view) {
