@@ -376,10 +376,15 @@ export const MAIN_HTML = `
           </div>
         </div>
         <div class="flex items-center space-x-1.5">
+          <button id="detailPerspectiveBtn" onclick="togglePerspective()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all" style="color:#a16207;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.16)">
+            <i id="detailPerspectiveIcon" class="fas fa-arrows-rotate text-xs"></i>
+            <span id="detailPerspectiveText">切换融资方视角</span>
+          </button>
+          <div class="w-px h-6 bg-gray-200 mx-1"></div>
           <button onclick="showToast('info','分享','分享链接已复制')" class="tooltip p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 text-sm" data-tip="分享"><i class="fas fa-share-alt"></i></button>
           <button onclick="showToast('info','收藏','已添加到收藏夹')" class="tooltip p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 text-sm" data-tip="收藏"><i class="fas fa-bookmark"></i></button>
           <div class="w-px h-6 bg-gray-200 mx-1"></div>
-          <button onclick="expressIntent()" id="btnExpressIntent" class="btn-primary text-xs py-1.5 px-4" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);"><i class="fas fa-hand-point-up mr-1"></i>我要参与</button>
+          <button onclick="expressIntent()" id="btnExpressIntent" class="investor-only btn-primary text-xs py-1.5 px-4" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);"><i class="fas fa-hand-point-up mr-1"></i>我要参与</button>
         </div>
       </div>
     </nav>
@@ -410,12 +415,12 @@ export const MAIN_HTML = `
 
     <!-- Tab: 做功课 -->
     <div id="sessionTab-research" class="flex flex-1 overflow-hidden">
-      <div class="w-2/5 border-r border-gray-200 flex flex-col bg-white overflow-y-auto">
+      <div id="researchLeftPanel" class="w-2/5 border-r border-gray-200 flex flex-col bg-white overflow-y-auto">
         <div class="p-5" id="detailLeft">
           <div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">加载中...</p></div>
         </div>
       </div>
-      <div class="w-3/5 flex flex-col bg-slate-50 overflow-y-auto">
+      <div class="w-3/5 flex flex-col bg-slate-50 overflow-y-auto investor-only">
         <div class="p-3 border-b border-gray-200 bg-white flex items-center justify-between">
           <div class="flex items-center space-x-2"><span class="text-sm font-semibold text-gray-700"><i class="fas fa-book-open mr-1.5 text-cyan-500"></i>做功课工作台</span></div>
           <div class="flex bg-gray-100 rounded-lg p-0.5">
@@ -690,30 +695,12 @@ export const MAIN_HTML = `
         <div class="xl:col-span-2 space-y-4">
           <div class="bg-white rounded-2xl border border-gray-100 p-5">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-base font-bold text-gray-900"><i class="fas fa-comments mr-2 text-amber-600"></i>方案提交与谈判循环</h3>
-              <span id="negotiationGateTip" class="text-[11px] px-2 py-0.5 rounded bg-amber-50 text-amber-700">建议先完成表达意向</span>
+              <h3 class="text-base font-bold text-gray-900"><i class="fas fa-layer-group mr-2 text-cyan-600"></i>多方案对比</h3>
+              <span id="negotiationGateTip" class="text-[11px] px-2 py-0.5 rounded bg-amber-50 text-amber-700">在条款工作台提交方案后，方案将出现在此处</span>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-              <div class="p-2.5 rounded-lg bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">融资金额</p><p id="negAmount" class="font-semibold text-gray-800">--</p></div>
-              <div class="p-2.5 rounded-lg bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">分成比例</p><p id="negShare" class="font-semibold text-gray-800">--</p></div>
-              <div class="p-2.5 rounded-lg bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">APR</p><p id="negApr" class="font-semibold text-gray-800">--</p></div>
-              <div class="p-2.5 rounded-lg bg-gray-50 border border-gray-100"><p class="text-xs text-gray-500">合作期限</p><p id="negTerm" class="font-semibold text-gray-800">--</p></div>
+            <div id="negProposalGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <p id="negProposalEmpty" class="text-sm text-gray-400 col-span-full py-6 text-center">暂无方案，请在条款工作台中提交方案草稿。</p>
             </div>
-            <div class="mt-3">
-              <label class="block text-xs text-gray-500 mb-1">提案备注</label>
-              <textarea id="negProposalNote" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="补充本次方案核心诉求"></textarea>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
-              <button onclick="saveNegotiationDraft('A')" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">保存草稿A</button>
-              <button onclick="saveNegotiationDraft('B')" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">保存草稿B</button>
-              <button onclick="saveNegotiationDraft('C')" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">保存草稿C</button>
-              <button onclick="submitNegotiationProposalFromCurrent()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700">提交当前方案</button>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-2xl border border-gray-100 p-5">
-            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-layer-group mr-2 text-cyan-600"></i>多方案对比（A/B/C）</h3>
-            <div id="negDraftCompare" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
           </div>
 
           <div class="bg-white rounded-2xl border border-gray-100 p-5">
@@ -752,6 +739,104 @@ export const MAIN_HTML = `
             <pre id="negContractPayloadBox" class="p-3 rounded-xl bg-gray-50 border border-gray-100 text-[11px] leading-5 text-gray-600 whitespace-pre-wrap">尚未达成条款，暂无输出。</pre>
             <p class="text-[11px] text-gray-400 mt-2">约束：仅公共参数会流向合约通，私有预测与派生指标不会外传。</p>
           </div>
+        </div>
+      </div>
+
+      <!-- 方案详情弹窗 -->
+      <div id="proposalDetailOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40" onclick="if(event.target===this)closeProposalDetail()">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto mx-4">
+          <div class="sticky top-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between rounded-t-2xl">
+            <div>
+              <h3 id="pdTitle" class="text-sm font-bold text-gray-900">方案详情</h3>
+              <p id="pdMeta" class="text-xs text-gray-500 mt-0.5"></p>
+            </div>
+            <button onclick="closeProposalDetail()" class="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="p-5 space-y-4">
+            <!-- 公共条款 -->
+            <div>
+              <h4 class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-eye mr-1 text-gray-400"></i>公共条款</h4>
+              <div id="pdPublic" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm"></div>
+            </div>
+            <!-- 私有预测 -->
+            <div>
+              <h4 class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-lock mr-1 text-indigo-400"></i>私有预测</h4>
+              <div id="pdPrivate" class="grid grid-cols-2 gap-2 text-sm"></div>
+            </div>
+            <!-- 派生指标 -->
+            <div>
+              <h4 class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-calculator mr-1 text-amber-400"></i>派生指标</h4>
+              <div id="pdDerived" class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm"></div>
+            </div>
+            <!-- 编辑区（仅方案发起方可见） -->
+            <div id="pdEditSection" class="hidden border-t border-gray-100 pt-4">
+              <h4 class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-pen mr-1 text-cyan-400"></i>修改方案</h4>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div><label class="block text-[11px] text-gray-500 mb-0.5">融资金额（万）</label><input id="pdEditAmount" type="number" min="1" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs"></div>
+                <div><label class="block text-[11px] text-gray-500 mb-0.5">分成比例（%）</label><input id="pdEditShare" type="number" step="0.1" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs"></div>
+                <div><label class="block text-[11px] text-gray-500 mb-0.5">APR（%）</label><input id="pdEditApr" type="number" step="0.1" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs"></div>
+                <div><label class="block text-[11px] text-gray-500 mb-0.5">合作期限（月）</label><input id="pdEditTerm" type="number" min="1" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs"></div>
+              </div>
+              <button id="pdSaveEditBtn" class="mt-2 w-full px-3 py-2 text-xs font-semibold rounded-lg bg-cyan-600 text-white hover:bg-cyan-700">保存修改</button>
+            </div>
+            <!-- 沟通区 -->
+            <div class="border-t border-gray-100 pt-4">
+              <h4 class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-comments mr-1 text-teal-400"></i>方案沟通</h4>
+              <div id="pdMessages" class="space-y-2 max-h-40 overflow-y-auto mb-2"></div>
+              <div class="flex gap-2">
+                <input id="pdMsgInput" type="text" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs" placeholder="输入沟通内容...">
+                <button id="pdSendMsgBtn" class="px-4 py-2 text-xs font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700">发送</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 反提案弹窗 -->
+    <div id="counterOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40" onclick="if(event.target===this)closeCounterOverlay()">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto mx-4">
+        <div class="sticky top-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between rounded-t-2xl">
+          <div>
+            <h3 class="text-sm font-bold text-gray-900"><i class="fas fa-reply mr-1.5 text-cyan-600"></i>发起反提案</h3>
+            <p id="counterOrigInfo" class="text-xs text-gray-500 mt-0.5"></p>
+          </div>
+          <button onclick="closeCounterOverlay()" class="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="p-5 space-y-4">
+          <!-- 反提案条款编辑 -->
+          <div>
+            <h4 class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-pen mr-1 text-cyan-400"></i>反提案条款</h4>
+            <p class="text-[11px] text-gray-400 mb-2">修改您希望调整的条款，合作期限自动推算。</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div><label class="block text-[11px] text-gray-500 mb-0.5">融资金额（万）</label><input id="counterAmount" type="number" min="1" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="recalcCounterTerm()"></div>
+              <div><label class="block text-[11px] text-gray-500 mb-0.5">分成比例（%）</label><input id="counterShare" type="number" step="0.1" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="recalcCounterTerm()"></div>
+              <div><label class="block text-[11px] text-gray-500 mb-0.5">APR（%）</label><input id="counterApr" type="number" step="0.1" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="recalcCounterTerm()"></div>
+              <div><label class="block text-[11px] text-gray-500 mb-0.5">合作期限（月）<span class="text-gray-400 ml-1">自动推算</span></label><input id="counterTerm" type="number" min="1" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed" disabled></div>
+            </div>
+          </div>
+          <!-- 当前条款工作台方案视图 -->
+          <div class="border-t border-gray-100 pt-4">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-xs font-bold text-gray-700"><i class="fas fa-sliders-h mr-1 text-amber-400"></i>当前条款工作台方案</h4>
+              <button onclick="closeCounterOverlay();switchSessionTab('workbench')" class="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-cyan-200 text-cyan-600 hover:bg-cyan-50"><i class="fas fa-arrow-right mr-1"></i>前往条款工作台</button>
+            </div>
+            <div class="space-y-2">
+              <div>
+                <p class="text-[10px] text-gray-400 mb-1">公共条款</p>
+                <div id="counterWbPublic" class="grid grid-cols-4 gap-1.5 text-xs"></div>
+              </div>
+              <div>
+                <p class="text-[10px] text-gray-400 mb-1">私有预测</p>
+                <div id="counterWbPrivate" class="grid grid-cols-2 gap-1.5 text-xs"></div>
+              </div>
+              <div>
+                <p class="text-[10px] text-gray-400 mb-1">派生指标</p>
+                <div id="counterWbDerived" class="grid grid-cols-3 gap-1.5 text-xs"></div>
+              </div>
+            </div>
+          </div>
+          <button id="counterSubmitBtn" class="w-full px-3 py-2.5 text-xs font-semibold rounded-lg bg-cyan-600 text-white hover:bg-cyan-700">提交反提案</button>
         </div>
       </div>
     </div>
