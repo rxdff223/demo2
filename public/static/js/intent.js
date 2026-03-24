@@ -114,6 +114,7 @@
     }
 
     function getIntentAmountText(state) {
+      if (state.amountText && !state.amountBand) return state.amountText;
       if (state.amountBand === 'custom') {
         const min = parseWanValue(state.customMin);
         const max = parseWanValue(state.customMax);
@@ -124,6 +125,20 @@
       const parts = String(state.amountBand).split('-');
       if (parts.length === 2) return parts[0] + '万 - ' + parts[1] + '万';
       return state.amountBand;
+    }
+
+    function buildIntentSummaryText(source) {
+      if (!currentDeal) return '';
+      const concerns = Array.isArray(source?.concerns) ? source.concerns : [];
+      const concernsText = concerns.length > 0 ? concerns.join('、') : '暂无额外关注点';
+      const noteText = source?.note ? '备注：' + source.note : '备注：无';
+      const invType = source?.investmentType || 'RBF固定';
+      return '项目：' + currentDeal.name +
+        '；投资类型：' + invType +
+        '；意向金额：' + getIntentAmountText(source || {}) +
+        '；核心关注：' + concernsText +
+        '；参考：AI评分' + currentDeal.aiScore + ' / 风控' + (currentDeal.riskGrade || 'N/A') +
+        '；' + noteText;
     }
 
     function renderIntentRequestList(state) {
@@ -147,7 +162,9 @@
         };
         const st = statusMap[req.response] || statusMap.pending;
         const at = req.submittedAt ? req.submittedAt.slice(0, 16).replace('T', ' ') : '--';
-        const summary = req.summary || '无摘要';
+        const summary = (req.investmentType || req.amountBand || req.amountText || req.note || (Array.isArray(req.concerns) && req.concerns.length))
+          ? buildIntentSummaryText(req)
+          : (req.summary || '无摘要');
         const preview = summary.length > 52 ? (summary.slice(0, 52) + '...') : summary;
         return '<button onclick="selectIntentRequest(\'' + req.id + '\')" ' + (locked ? 'disabled' : '') + ' class="w-full text-left p-2.5 rounded-lg border transition-colors ' + (locked ? 'opacity-45 grayscale border-gray-200 bg-gray-100 cursor-not-allowed' : (active ? 'border-teal-300 bg-teal-50' : 'border-gray-100 bg-gray-50 hover:bg-white')) + '">' +
           '<div class="flex items-center justify-between mb-1">' +
@@ -180,14 +197,19 @@
       const summaryBox = document.getElementById('intentSummaryBox');
       const responseBox = document.getElementById('intentResponseBox');
       const selected = getSelectedIntentRequest(state, false);
+      const selectedSummary = selected
+        ? ((selected.investmentType || selected.amountBand || selected.amountText || selected.note || (Array.isArray(selected.concerns) && selected.concerns.length))
+            ? buildIntentSummaryText(selected)
+            : (selected.summary || ''))
+        : '';
 
       if (summaryBox) {
-        if (selected && selected.summary) {
-          summaryBox.textContent = selected.summary;
+        if (selectedSummary) {
+          summaryBox.textContent = selectedSummary;
         } else if (currentPerspective === 'financer') {
           summaryBox.textContent = '尚未收到投资方提交的结构化意向。';
         } else {
-          summaryBox.textContent = state.summary || '尚未生成摘要。';
+          summaryBox.textContent = state.summary || buildIntentSummaryText(state) || '尚未生成摘要。';
         }
       }
 
@@ -339,15 +361,7 @@
           return;
         }
       }
-      const concernsText = state.concerns.length > 0 ? state.concerns.join('、') : '暂无额外关注点';
-      const noteText = state.note ? '备注：' + state.note : '备注：无';
-      state.summary =
-        '项目：' + currentDeal.name +
-        '；投资类型：' + state.investmentType +
-        '；意向金额：' + getIntentAmountText(state) +
-        '；核心关注：' + concernsText +
-        '；参考：AI评分' + currentDeal.aiScore + ' / 风控' + (currentDeal.riskGrade || 'N/A') +
-        '；' + noteText;
+      state.summary = buildIntentSummaryText(state);
       saveIntentState();
       renderIntentSummaryAndResponse(state);
       showToast('success', '摘要已生成', '请确认后发送给融资方');
@@ -361,10 +375,18 @@
       }
       const state = ensureIntentState();
       if (!state) return;
-      if (!state.summary) {
-        generateIntentSummary();
-        if (!state.summary) return;
+      updateIntentAndPreview();
+      if (state.amountBand === 'custom') {
+        const min = parseWanValue(state.customMin);
+        const max = parseWanValue(state.customMax);
+        if (!(min > 0 && max > 0 && max >= min)) {
+          showToast('warning', '自定义区间无效', '请填写有效金额区间（最大值需>=最小值）');
+          return;
+        }
       }
+      // 提交前强制按当前字段重算摘要，避免“生成后又改字段”导致摘要过期
+      state.summary = buildIntentSummaryText(state);
+      if (!state.summary) return;
 
       const request = {
         id: 'IR_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
