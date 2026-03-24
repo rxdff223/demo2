@@ -127,7 +127,7 @@
             '<span class="text-xs text-gray-500">' + at + '</span>' +
             '<span class="text-[10px] px-2 py-0.5 rounded ' + st.cls + '">' + st.text + '</span>' +
           '</div>' +
-          '<p class="text-xs text-gray-700 mb-1">' + preview + '</p>' +
+          '<p class="text-xs text-gray-700 mb-1 truncate">' + preview + '</p>' +
           '<p class="text-[10px] text-gray-400">提交方：' + (req.fromName || '投资方') + '</p>' +
         '</button>';
       }).join('');

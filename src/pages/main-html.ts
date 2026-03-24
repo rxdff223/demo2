@@ -665,7 +665,7 @@ export const MAIN_HTML = `
               <span id="intentRequestCount" class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">0</span>
             </div>
             <p id="intentRequestQueueHint" class="text-[11px] text-gray-400 mb-3">按提交时间展示，优先处理最新请求。</p>
-            <div id="intentRequestList" class="space-y-2 text-sm text-gray-600">暂无意向请求。</div>
+            <div id="intentRequestList" class="space-y-2 text-sm text-gray-600 max-h-80 overflow-y-auto pr-1">暂无意向请求。</div>
           </div>
           <div class="bg-white rounded-2xl border border-gray-100 p-5">
             <h3 id="intentSummaryTitle" class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-file-signature mr-2 text-cyan-600"></i>意向摘要确认</h3>
