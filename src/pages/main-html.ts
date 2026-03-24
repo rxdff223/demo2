@@ -466,8 +466,8 @@ export const MAIN_HTML = `
 
           <div class="bg-white rounded-2xl border border-gray-100 p-4">
             <div class="flex items-center justify-between mb-3">
-              <h4 class="text-sm font-bold text-gray-800"><i class="fas fa-upload mr-1.5 text-cyan-500"></i>融资方提交预估</h4>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-50 text-cyan-600">只读 · 3年</span>
+              <h4 class="text-sm font-bold text-gray-800"><i class="fas fa-upload mr-1.5 text-cyan-500"></i>融资方预估</h4>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-50 text-cyan-600">参与通内 · 3年</span>
             </div>
             <div id="fcBorrowerInfo" class="space-y-2">
               <p class="text-xs text-gray-400">选择项目后显示</p>
