@@ -15,6 +15,16 @@
       return selected;
     }
 
+    function getActiveIntentRequest(state) {
+      const requests = getIntentRequests(state);
+      if (!requests.length) return null;
+      if (state?.activeRequestId) {
+        const active = requests.find((r) => r.id === state.activeRequestId && r.response === 'accepted');
+        if (active) return active;
+      }
+      return requests.find((r) => r.response === 'accepted') || null;
+    }
+
     function syncLegacyIntentFields(state) {
       const selected = getSelectedIntentRequest(state, false);
       if (selected) {
@@ -27,8 +37,7 @@
     }
 
     function hasAcceptedIntent(state) {
-      const requests = getIntentRequests(state);
-      return requests.some((r) => r.response === 'accepted') || state?.response === 'accepted';
+      return !!getActiveIntentRequest(state) || state?.response === 'accepted';
     }
 
     function hasPendingIntent(state) {
@@ -51,7 +60,8 @@
           submittedAt: '',
           response: 'none',
           requests: [],
-          selectedRequestId: ''
+          selectedRequestId: '',
+          activeRequestId: ''
         };
         saveIntentState();
       }
@@ -77,6 +87,21 @@
       }
 
       state.requests.sort((a, b) => (new Date(b.submittedAt).getTime()) - (new Date(a.submittedAt).getTime()));
+
+      if (typeof state.activeRequestId !== 'string') {
+        state.activeRequestId = '';
+        migrated = true;
+      }
+      if (!state.activeRequestId) {
+        const accepted = state.requests.find((r) => r.response === 'accepted');
+        if (accepted) {
+          state.activeRequestId = accepted.id;
+          migrated = true;
+        }
+      } else if (!state.requests.some((r) => r.id === state.activeRequestId && r.response === 'accepted')) {
+        state.activeRequestId = '';
+        migrated = true;
+      }
 
       if (!state.selectedRequestId && state.requests.length > 0) {
         state.selectedRequestId = state.requests[0].id;
@@ -107,12 +132,14 @@
       if (count) count.textContent = String(getIntentRequests(state).length);
       if (!list) return;
       const requests = getIntentRequests(state);
+      const activeConn = getActiveIntentRequest(state);
       if (!requests.length) {
         list.textContent = '暂无意向请求。';
         return;
       }
       list.innerHTML = requests.map((req) => {
         const active = req.id === state.selectedRequestId;
+        const locked = !!activeConn && activeConn.id !== req.id;
         const statusMap = {
           pending: { text: '待处理', cls: 'bg-amber-50 text-amber-700' },
           accepted: { text: '已接受', cls: 'bg-emerald-50 text-emerald-700' },
@@ -122,10 +149,10 @@
         const at = req.submittedAt ? req.submittedAt.slice(0, 16).replace('T', ' ') : '--';
         const summary = req.summary || '无摘要';
         const preview = summary.length > 52 ? (summary.slice(0, 52) + '...') : summary;
-        return '<button onclick="selectIntentRequest(\'' + req.id + '\')" class="w-full text-left p-2.5 rounded-lg border ' + (active ? 'border-teal-300 bg-teal-50' : 'border-gray-100 bg-gray-50 hover:bg-white') + '">' +
+        return '<button onclick="selectIntentRequest(\'' + req.id + '\')" ' + (locked ? 'disabled' : '') + ' class="w-full text-left p-2.5 rounded-lg border transition-colors ' + (locked ? 'opacity-45 grayscale border-gray-200 bg-gray-100 cursor-not-allowed' : (active ? 'border-teal-300 bg-teal-50' : 'border-gray-100 bg-gray-50 hover:bg-white')) + '">' +
           '<div class="flex items-center justify-between mb-1">' +
             '<span class="text-xs text-gray-500">' + at + '</span>' +
-            '<span class="text-[10px] px-2 py-0.5 rounded ' + st.cls + '">' + st.text + '</span>' +
+            '<div class="flex items-center gap-1"><span class="text-[10px] px-2 py-0.5 rounded ' + st.cls + '">' + st.text + '</span>' + (locked ? '<span class="text-[10px] px-2 py-0.5 rounded bg-gray-200 text-gray-500">锁定</span>' : '') + '</div>' +
           '</div>' +
           '<p class="text-xs text-gray-700 mb-1 truncate">' + preview + '</p>' +
           '<p class="text-[10px] text-gray-400">提交方：' + (req.fromName || '投资方') + '</p>' +
@@ -138,6 +165,11 @@
       const state = ensureIntentState();
       if (!state) return;
       if (!getIntentRequests(state).some((r) => r.id === requestId)) return;
+      const activeConn = getActiveIntentRequest(state);
+      if (activeConn && activeConn.id !== requestId) {
+        showToast('info', '当前请求已锁定', '请先处理或拒绝已接受的请求，再选择其他请求');
+        return;
+      }
       state.selectedRequestId = requestId;
       syncLegacyIntentFields(state);
       saveIntentState();
@@ -170,12 +202,18 @@
 
       if (selected.response === 'accepted') {
         responseBox.className = 'p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-sm text-emerald-700';
-        responseBox.textContent = '该意向已接受沟通，可进入条款工作台继续推进。';
+        responseBox.textContent = '该意向已接受沟通，其他请求将暂时锁定。';
         return;
       }
       if (selected.response === 'rejected') {
         responseBox.className = 'p-3 rounded-xl bg-rose-50 border border-rose-100 text-sm text-rose-700';
         responseBox.textContent = '该意向已标记为暂不考虑。';
+        return;
+      }
+      const activeConn = getActiveIntentRequest(state);
+      if (currentPerspective === 'financer' && activeConn && activeConn.id !== selected.id) {
+        responseBox.className = 'p-3 rounded-xl bg-gray-100 border border-gray-200 text-sm text-gray-600';
+        responseBox.textContent = '当前已与“' + (activeConn.fromName || '投资方') + '”建联，该请求暂时锁定。';
         return;
       }
       responseBox.className = 'p-3 rounded-xl bg-cyan-50 border border-cyan-100 text-sm text-cyan-700';
@@ -193,6 +231,8 @@
       const queueCard = document.getElementById('intentRequestQueueCard');
       const queueTitle = document.getElementById('intentRequestQueueTitle');
       const queueHint = document.getElementById('intentRequestQueueHint');
+      const acceptBtn = document.getElementById('btnIntentAccept');
+      const rejectBtn = document.getElementById('btnIntentReject');
 
       if (formTitle) {
         formTitle.innerHTML = isFinancer
@@ -211,13 +251,20 @@
       }
 
       const selected = getSelectedIntentRequest(state, false);
-      const canHandle = isFinancer && !!selected && selected.response === 'pending';
+      const activeConn = getActiveIntentRequest(state);
+      const canAccept = isFinancer && !!selected && selected.response === 'pending' && (!activeConn || activeConn.id === selected.id);
+      const canReject = isFinancer && !!selected && (selected.response === 'pending' || (selected.response === 'accepted' && activeConn && activeConn.id === selected.id));
+      const canShowActions = canAccept || canReject;
       if (formActions) formActions.classList.toggle('hidden', isFinancer);
-      if (responseActions) responseActions.classList.toggle('hidden', !canHandle);
+      if (responseActions) responseActions.classList.toggle('hidden', !canShowActions);
+      if (acceptBtn) acceptBtn.classList.toggle('hidden', !canAccept);
+      if (rejectBtn) {
+        rejectBtn.textContent = (selected && selected.response === 'accepted') ? '拒绝并释放锁定' : '暂不考虑';
+      }
 
       if (responseTip) {
         responseTip.textContent = isFinancer
-          ? '支持多条意向逐条处理：选择左侧请求后再执行“接受沟通/暂不考虑”。'
+          ? '规则：接受一条后其余请求会变灰锁定；仅当拒绝当前已接受请求后，其他请求才恢复可选。'
           : '验收说明：接受沟通后建议进入条款工作台；暂不考虑则项目留在列表待观察。';
       }
 
@@ -234,6 +281,12 @@
       if (!currentDeal) return;
       const state = ensureIntentState();
       if (!state) return;
+      const activeConn = getActiveIntentRequest(state);
+      if (activeConn && state.selectedRequestId !== activeConn.id) {
+        state.selectedRequestId = activeConn.id;
+        syncLegacyIntentFields(state);
+        saveIntentState();
+      }
       const typeEl = document.getElementById('intentInvestmentType');
       const bandEl = document.getElementById('intentAmountBand');
       const minEl = document.getElementById('intentCustomMin');
@@ -350,17 +403,27 @@
       if (!state) return;
 
       const selected = getSelectedIntentRequest(state, false);
+      const activeConn = getActiveIntentRequest(state);
       if (!selected) {
         showToast('warning', '暂无意向可处理', '当前项目尚未收到投资方意向');
         return;
       }
-      if (selected.response !== 'pending') {
+      if (status === 'accepted' && activeConn && activeConn.id !== selected.id) {
+        showToast('warning', '请求已锁定', '请先拒绝当前已接受请求，再接受新的请求');
+        return;
+      }
+      if (status === 'accepted' && selected.response !== 'pending') {
+        showToast('info', '该请求已处理', '请切换其他待处理意向请求');
+        return;
+      }
+      if (status === 'rejected' && selected.response !== 'pending' && !(selected.response === 'accepted' && activeConn && activeConn.id === selected.id)) {
         showToast('info', '该请求已处理', '请切换其他待处理意向请求');
         return;
       }
 
       if (status === 'accepted') {
         selected.response = 'accepted';
+        state.activeRequestId = selected.id;
         currentDeal.status = 'interested';
         const originalAccepted = allDeals.find((d) => d.id === currentDeal.id);
         if (originalAccepted) originalAccepted.status = 'interested';
@@ -378,8 +441,11 @@
 
       if (status === 'rejected') {
         selected.response = 'rejected';
-        const hasActive = getIntentRequests(state).some((r) => r.response === 'pending' || r.response === 'accepted');
-        currentDeal.status = hasActive ? 'interested' : 'open';
+        if (state.activeRequestId === selected.id) {
+          state.activeRequestId = '';
+        }
+        const hasLive = hasPendingIntent(state) || hasAcceptedIntent(state);
+        currentDeal.status = hasLive ? 'interested' : 'open';
         const originalRejected = allDeals.find((d) => d.id === currentDeal.id);
         if (originalRejected) originalRejected.status = currentDeal.status;
         localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
