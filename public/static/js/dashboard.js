@@ -123,9 +123,9 @@
         if (industrySel) industrySel.value = 'all';
         setDashboardViewMode('store');
         if (keyword) {
-          showToast('info', '已切换门店视图', '已按品牌“' + keyword + '”展示对应门店');
+          showToast('info', '已切换项目视图', '已按品牌“' + keyword + '”展示对应项目');
         } else {
-          showToast('info', '已切换门店视图', '已应用品牌筛选');
+          showToast('info', '已切换项目视图', '已应用品牌筛选');
         }
         return;
       }

@@ -286,10 +286,10 @@ export const MAIN_HTML = `
           </div>
           <div class="flex items-center gap-2">
             <div id="dashboardViewModeGroup" class="flex items-center bg-white border border-gray-200 rounded-lg p-0.5">
-              <button id="viewModeStore" onclick="setDashboardViewMode('store')" class="px-2.5 py-1 text-xs font-semibold rounded-md bg-teal-50 text-teal-700">门店视图</button>
+              <button id="viewModeStore" onclick="setDashboardViewMode('store')" class="px-2.5 py-1 text-xs font-semibold rounded-md bg-teal-50 text-teal-700">项目视图</button>
               <button id="viewModeBrand" onclick="setDashboardViewMode('brand')" class="px-2.5 py-1 text-xs font-semibold rounded-md text-gray-600 hover:bg-gray-50">品牌视图</button>
             </div>
-            <div class="relative"><input type="text" id="dealSearch" placeholder="搜索公司/品牌/门店/行业/地区" class="search-input px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white w-56" oninput="renderDeals()"></div>
+            <div class="relative"><input type="text" id="dealSearch" placeholder="搜索公司/品牌/项目/行业/地区" class="search-input px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white w-56" oninput="renderDeals()"></div>
             <select class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white" id="filterIndustry" onchange="renderDeals()">
               <option value="all">全部行业</option>
               <option value="餐饮">餐饮</option>

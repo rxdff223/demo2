@@ -76,41 +76,63 @@
 
     // ==================== Demo Data (模拟发起通数据) ====================
     function loadDemoData() {
-      const industries = ['餐饮','零售','演艺','教育','健康','科技','餐饮','零售','科技','餐饮','教育','健康'];
-      const storeNames = [
-        '星巴克杭州新店','瑞幸深圳旗舰店','周杰伦2026巡演','新东方AI学堂',
-        '美年健康体检中心','字节跳动AI Lab','海底捞成都总店','泡泡玛特北京旗舰',
-        '喜茶上海概念店','太二酸菜鱼广州店','猿辅导天津中心','和睦家北京诊所'
+      const brandProfiles = [
+        { brandName: '星巴克', industry: '餐饮', companyName: '杭州星巴克运营有限公司', originator: '杭州星巴克运营方', cities: ['杭州', '上海', '苏州'] },
+        { brandName: '瑞幸', industry: '餐饮', companyName: '深圳瑞幸品牌管理有限公司', originator: '深圳瑞幸加盟商', cities: ['深圳', '广州', '东莞'] },
+        { brandName: '杰威尔文化', industry: '演艺', companyName: '杰威尔演艺经纪有限公司', originator: '演艺经纪公司', cities: ['上海', '北京', '成都'] },
+        { brandName: '新东方', industry: '教育', companyName: '新东方教育科技集团', originator: '新东方教育集团', cities: ['北京', '天津', '南京'] },
+        { brandName: '美年健康', industry: '健康', companyName: '美年大健康产业集团', originator: '美年大健康集团', cities: ['上海', '杭州', '宁波'] },
+        { brandName: '字节跳动', industry: '科技', companyName: '字节跳动科技有限公司', originator: '字节跳动投融部', cities: ['北京', '深圳', '上海'] },
+        { brandName: '海底捞', industry: '餐饮', companyName: '海底捞餐饮管理集团', originator: '海底捞运营总部', cities: ['成都', '重庆', '西安'] },
+        { brandName: '泡泡玛特', industry: '零售', companyName: '泡泡玛特文化创意有限公司', originator: '泡泡玛特品牌方', cities: ['北京', '上海', '深圳'] },
+        { brandName: '喜茶', industry: '餐饮', companyName: '喜茶餐饮管理有限公司', originator: '喜茶(深圳)公司', cities: ['深圳', '上海', '广州'] },
+        { brandName: '太二', industry: '餐饮', companyName: '太二餐饮管理有限公司', originator: '太二餐饮管理', cities: ['广州', '深圳', '武汉'] },
+        { brandName: '猿辅导', industry: '教育', companyName: '猿辅导在线教育科技', originator: '猿辅导科技', cities: ['天津', '北京', '杭州'] },
+        { brandName: '和睦家', industry: '健康', companyName: '和睦家医疗投资管理', originator: '和睦家医疗', cities: ['北京', '上海', '广州'] }
       ];
-      const brandNames = ['星巴克','瑞幸','杰威尔文化','新东方','美年健康','字节跳动','海底捞','泡泡玛特','喜茶','太二','猿辅导','和睦家'];
-      const companyNames = ['杭州星巴克运营有限公司','深圳瑞幸品牌管理有限公司','杰威尔演艺经纪有限公司','新东方教育科技集团','美年大健康产业集团','字节跳动科技有限公司','海底捞餐饮管理集团','泡泡玛特文化创意有限公司','喜茶餐饮管理有限公司','太二餐饮管理有限公司','猿辅导在线教育科技','和睦家医疗投资管理'];
-      const locations = ['杭州','深圳','全国','北京','上海','北京','成都','北京','上海','广州','天津','北京'];
-      const originators = ['杭州星巴克运营方','深圳瑞幸加盟商','演艺经纪公司','新东方教育集团','美年大健康集团','字节跳动投融部','海底捞运营总部','泡泡玛特品牌方','喜茶(深圳)公司','太二餐饮管理','猿辅导科技','和睦家医疗'];
+
+      const suffixByIndustry = {
+        餐饮: ['旗舰店', '中心店', '社区店'],
+        零售: ['旗舰店', '概念店', '体验店'],
+        演艺: ['演出中心', '内容基地', '艺人工作室'],
+        教育: ['学习中心', '校区', '教学点'],
+        健康: ['体检中心', '诊疗中心', '门诊部'],
+        科技: ['体验中心', '创新中心', '运营中心']
+      };
+      const riskCycle = ['A+', 'A', 'A-', 'B+'];
       const disclosureStates = ['disclosed', 'undisclosed', 'none'];
 
-      allDeals = storeNames.map((storeName, i) => ({
-        id: 'D_' + (1000 + i),
-        name: storeName,
-        companyName: companyNames[i],
-        brandName: brandNames[i],
-        storeName,
-        industry: industries[i],
-        amount: (200 + Math.floor(Math.random() * 800)) * 10000,
-        aiScore: (7.0 + Math.random() * 3.0).toFixed(1),
-        status: 'open',
-        skipped: false,
-        revenueShare: (6 + Math.floor(Math.random() * 16)) + '%',
-        period: (18 + Math.floor(Math.random() * 42)) + '个月',
-        location: locations[i],
-        originator: originators[i],
-        kybVerified: i % 4 !== 1,
-        historyDisclosure: disclosureStates[i % 3],
-        originateDate: new Date(Date.now() - Math.random() * 30 * 86400000).toISOString().slice(0, 10),
-        description: '由「' + originators[i] + '」通过发起通提交的' + industries[i] + '行业投资机会。已通过平台基础审核。',
-        riskGrade: ['A+','A','A','A-','B+','A+','A-','B+','A','B+','A-','A'][i],
-        monthlyRevenue: (50 + Math.floor(Math.random() * 200)) + '万',
-        employeeCount: (20 + Math.floor(Math.random() * 80)),
-        operatingYears: (1 + Math.floor(Math.random() * 8)).toFixed(1)
-      }));
+      allDeals = [];
+      brandProfiles.forEach((profile, brandIdx) => {
+        const suffixes = suffixByIndustry[profile.industry] || ['项目A', '项目B', '项目C'];
+        profile.cities.forEach((city, branchIdx) => {
+          const dealIdx = allDeals.length;
+          const storeName = profile.brandName + city + suffixes[branchIdx % suffixes.length];
+          allDeals.push({
+            id: 'D_' + (1000 + dealIdx),
+            name: storeName,
+            companyName: profile.companyName,
+            brandName: profile.brandName,
+            storeName,
+            industry: profile.industry,
+            amount: (220 + Math.floor(Math.random() * 760)) * 10000,
+            aiScore: (7.0 + Math.random() * 3.0).toFixed(1),
+            status: 'open',
+            skipped: false,
+            revenueShare: (6 + Math.floor(Math.random() * 16)) + '%',
+            period: (18 + Math.floor(Math.random() * 42)) + '个月',
+            location: city,
+            originator: profile.originator,
+            kybVerified: branchIdx !== 2,
+            historyDisclosure: disclosureStates[(brandIdx + branchIdx) % disclosureStates.length],
+            originateDate: new Date(Date.now() - Math.random() * 45 * 86400000).toISOString().slice(0, 10),
+            description: '由「' + profile.originator + '」通过发起通提交的' + profile.industry + '行业投资机会。已通过平台基础审核。',
+            riskGrade: riskCycle[(brandIdx + branchIdx) % riskCycle.length],
+            monthlyRevenue: (50 + Math.floor(Math.random() * 220)) + '万',
+            employeeCount: (20 + Math.floor(Math.random() * 90)),
+            operatingYears: (1 + Math.floor(Math.random() * 8)).toFixed(1)
+          });
+        });
+      });
       localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
     }
