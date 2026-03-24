@@ -156,9 +156,14 @@
       const terms = getPublicTermsFromWorkbench();
       const gate = document.getElementById('negotiationGateTip');
       if (gate) {
-        if (intent && intent.response === 'accepted') {
+        const accepted = intent && (typeof hasAcceptedIntent === 'function' ? hasAcceptedIntent(intent) : intent.response === 'accepted');
+        const pending = intent && (typeof hasPendingIntent === 'function' ? hasPendingIntent(intent) : intent.response === 'pending');
+        if (accepted) {
           gate.className = 'text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700';
           gate.textContent = '已建联，可正式谈判';
+        } else if (currentPerspective === 'financer' && pending) {
+          gate.className = 'text-[11px] px-2 py-0.5 rounded bg-amber-50 text-amber-700';
+          gate.textContent = '建议先完成意向处理';
         } else {
           gate.className = 'text-[11px] px-2 py-0.5 rounded bg-amber-50 text-amber-700';
           gate.textContent = '建议先完成表达意向';
@@ -460,4 +465,3 @@
       showToast('success', '已回填到工作台', '你可以在条款工作台继续修改并提交');
       switchSessionTab('workbench');
     }
-

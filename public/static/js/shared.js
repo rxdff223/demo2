@@ -100,6 +100,15 @@
       if (filterLabel) filterLabel.style.display = isFinancer ? 'none' : '';
       const kybHintLine = document.getElementById('kybHintLine');
       if (kybHintLine) kybHintLine.style.display = isFinancer ? 'none' : '';
+      const intentTabBtn = document.getElementById('sessionTabBtn-intent');
+      if (intentTabBtn) {
+        intentTabBtn.innerHTML = isFinancer
+          ? '<i class="fas fa-hand-point-up mr-1"></i>意向处理'
+          : '<i class="fas fa-hand-point-up mr-1"></i>表达意向';
+      }
+      if (currentSessionTab === 'intent' && typeof renderIntentTab === 'function') {
+        renderIntentTab();
+      }
       setDashboardViewMode(dashboardViewMode);
     }
 

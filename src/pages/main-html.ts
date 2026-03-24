@@ -397,7 +397,7 @@ export const MAIN_HTML = `
           <i class="fas fa-sliders-h mr-1"></i>条款工作台
         </button>
         <button id="sessionTabBtn-intent" onclick="switchSessionTab('intent')" class="session-tab-btn px-3 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50">
-          <i class="fas fa-hand-point-up mr-1"></i>表达意向
+          <i class="fas fa-hand-point-up mr-1"></i>意向处理
         </button>
         <button id="sessionTabBtn-negotiation" onclick="switchSessionTab('negotiation')" class="session-tab-btn px-3 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50">
           <i class="fas fa-comments mr-1"></i>谈判
@@ -659,6 +659,14 @@ export const MAIN_HTML = `
         </div>
 
         <div class="space-y-4">
+          <div id="intentRequestQueueCard" class="hidden bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-2">
+              <h3 id="intentRequestQueueTitle" class="text-base font-bold text-gray-900"><i class="fas fa-inbox mr-2 text-amber-600"></i>收到的意向请求</h3>
+              <span id="intentRequestCount" class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">0</span>
+            </div>
+            <p id="intentRequestQueueHint" class="text-[11px] text-gray-400 mb-3">按提交时间展示，优先处理最新请求。</p>
+            <div id="intentRequestList" class="space-y-2 text-sm text-gray-600">暂无意向请求。</div>
+          </div>
           <div class="bg-white rounded-2xl border border-gray-100 p-5">
             <h3 id="intentSummaryTitle" class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-file-signature mr-2 text-cyan-600"></i>意向摘要确认</h3>
             <div id="intentSummaryBox" class="p-3 rounded-xl bg-gray-50 border border-gray-100 text-sm text-gray-500">尚未生成摘要。</div>

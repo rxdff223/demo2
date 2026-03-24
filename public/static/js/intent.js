@@ -1,20 +1,91 @@
+    function getIntentRequests(state) {
+      if (!state || !Array.isArray(state.requests)) return [];
+      return state.requests;
+    }
+
+    function getSelectedIntentRequest(state, persist) {
+      const requests = getIntentRequests(state);
+      if (!requests.length) return null;
+      let selected = requests.find((r) => r.id === state.selectedRequestId);
+      if (!selected) {
+        selected = requests[0];
+        state.selectedRequestId = selected.id;
+        if (persist !== false) saveIntentState();
+      }
+      return selected;
+    }
+
+    function syncLegacyIntentFields(state) {
+      const selected = getSelectedIntentRequest(state, false);
+      if (selected) {
+        state.submittedAt = selected.submittedAt || '';
+        state.response = selected.response || 'pending';
+      } else {
+        state.submittedAt = '';
+        state.response = 'none';
+      }
+    }
+
+    function hasAcceptedIntent(state) {
+      const requests = getIntentRequests(state);
+      return requests.some((r) => r.response === 'accepted') || state?.response === 'accepted';
+    }
+
+    function hasPendingIntent(state) {
+      const requests = getIntentRequests(state);
+      return requests.some((r) => r.response === 'pending');
+    }
+
     function ensureIntentState() {
       if (!currentDeal) return null;
       const dealId = currentDeal.id;
-      if (intentByDeal[dealId]) return intentByDeal[dealId];
-      intentByDeal[dealId] = {
-        investmentType: 'RBF固定',
-        amountBand: '300-500',
-        customMin: '',
-        customMax: '',
-        concerns: [],
-        note: '',
-        summary: '',
-        submittedAt: '',
-        response: 'none'
-      };
-      saveIntentState();
-      return intentByDeal[dealId];
+      if (!intentByDeal[dealId]) {
+        intentByDeal[dealId] = {
+          investmentType: 'RBF固定',
+          amountBand: '300-500',
+          customMin: '',
+          customMax: '',
+          concerns: [],
+          note: '',
+          summary: '',
+          submittedAt: '',
+          response: 'none',
+          requests: [],
+          selectedRequestId: ''
+        };
+        saveIntentState();
+      }
+
+      const state = intentByDeal[dealId];
+      let migrated = false;
+
+      if (!Array.isArray(state.requests)) {
+        state.requests = [];
+        migrated = true;
+      }
+
+      // 兼容旧数据：将单条提交迁移到 requests
+      if (state.requests.length === 0 && state.submittedAt) {
+        state.requests.push({
+          id: 'IR_LEGACY_' + dealId,
+          submittedAt: state.submittedAt,
+          response: state.response === 'none' ? 'pending' : state.response,
+          summary: state.summary || '历史意向（无摘要）',
+          fromName: '投资方'
+        });
+        migrated = true;
+      }
+
+      state.requests.sort((a, b) => (new Date(b.submittedAt).getTime()) - (new Date(a.submittedAt).getTime()));
+
+      if (!state.selectedRequestId && state.requests.length > 0) {
+        state.selectedRequestId = state.requests[0].id;
+        migrated = true;
+      }
+
+      syncLegacyIntentFields(state);
+      if (migrated) saveIntentState();
+      return state;
     }
 
     function getIntentAmountText(state) {
@@ -30,27 +101,81 @@
       return state.amountBand;
     }
 
+    function renderIntentRequestList(state) {
+      const list = document.getElementById('intentRequestList');
+      const count = document.getElementById('intentRequestCount');
+      if (count) count.textContent = String(getIntentRequests(state).length);
+      if (!list) return;
+      const requests = getIntentRequests(state);
+      if (!requests.length) {
+        list.textContent = '暂无意向请求。';
+        return;
+      }
+      list.innerHTML = requests.map((req) => {
+        const active = req.id === state.selectedRequestId;
+        const statusMap = {
+          pending: { text: '待处理', cls: 'bg-amber-50 text-amber-700' },
+          accepted: { text: '已接受', cls: 'bg-emerald-50 text-emerald-700' },
+          rejected: { text: '已拒绝', cls: 'bg-rose-50 text-rose-700' }
+        };
+        const st = statusMap[req.response] || statusMap.pending;
+        const at = req.submittedAt ? req.submittedAt.slice(0, 16).replace('T', ' ') : '--';
+        const summary = req.summary || '无摘要';
+        const preview = summary.length > 52 ? (summary.slice(0, 52) + '...') : summary;
+        return '<button onclick="selectIntentRequest(\'' + req.id + '\')" class="w-full text-left p-2.5 rounded-lg border ' + (active ? 'border-teal-300 bg-teal-50' : 'border-gray-100 bg-gray-50 hover:bg-white') + '">' +
+          '<div class="flex items-center justify-between mb-1">' +
+            '<span class="text-xs text-gray-500">' + at + '</span>' +
+            '<span class="text-[10px] px-2 py-0.5 rounded ' + st.cls + '">' + st.text + '</span>' +
+          '</div>' +
+          '<p class="text-xs text-gray-700 mb-1">' + preview + '</p>' +
+          '<p class="text-[10px] text-gray-400">提交方：' + (req.fromName || '投资方') + '</p>' +
+        '</button>';
+      }).join('');
+    }
+
+    function selectIntentRequest(requestId) {
+      if (!currentDeal) return;
+      const state = ensureIntentState();
+      if (!state) return;
+      if (!getIntentRequests(state).some((r) => r.id === requestId)) return;
+      state.selectedRequestId = requestId;
+      syncLegacyIntentFields(state);
+      saveIntentState();
+      renderIntentPerspective(state);
+      renderIntentRequestList(state);
+      renderIntentSummaryAndResponse(state);
+    }
+
     function renderIntentSummaryAndResponse(state) {
       const summaryBox = document.getElementById('intentSummaryBox');
       const responseBox = document.getElementById('intentResponseBox');
+      const selected = getSelectedIntentRequest(state, false);
+
       if (summaryBox) {
-        if (state.summary) summaryBox.textContent = state.summary;
-        else summaryBox.textContent = currentPerspective === 'financer' ? '尚未收到投资方提交的结构化意向。' : '尚未生成摘要。';
+        if (selected && selected.summary) {
+          summaryBox.textContent = selected.summary;
+        } else if (currentPerspective === 'financer') {
+          summaryBox.textContent = '尚未收到投资方提交的结构化意向。';
+        } else {
+          summaryBox.textContent = state.summary || '尚未生成摘要。';
+        }
       }
+
       if (!responseBox) return;
-      if (!state.submittedAt) {
+      if (!selected) {
         responseBox.className = 'p-3 rounded-xl bg-amber-50 border border-amber-100 text-sm text-amber-700';
         responseBox.textContent = currentPerspective === 'financer' ? '当前暂无投资方意向待处理。' : '尚未提交意向。';
         return;
       }
-      if (state.response === 'accepted') {
+
+      if (selected.response === 'accepted') {
         responseBox.className = 'p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-sm text-emerald-700';
-        responseBox.textContent = '融资方已接受沟通，可进入条款工作台继续推进。';
+        responseBox.textContent = '该意向已接受沟通，可进入条款工作台继续推进。';
         return;
       }
-      if (state.response === 'rejected') {
+      if (selected.response === 'rejected') {
         responseBox.className = 'p-3 rounded-xl bg-rose-50 border border-rose-100 text-sm text-rose-700';
-        responseBox.textContent = '融资方暂不考虑，建议保留关注并等待后续窗口。';
+        responseBox.textContent = '该意向已标记为暂不考虑。';
         return;
       }
       responseBox.className = 'p-3 rounded-xl bg-cyan-50 border border-cyan-100 text-sm text-cyan-700';
@@ -65,11 +190,13 @@
       const formActions = document.getElementById('intentFormActions');
       const responseActions = document.getElementById('intentResponseActions');
       const responseTip = document.getElementById('intentResponseTip');
-      const acceptBtn = document.getElementById('btnIntentAccept');
-      const rejectBtn = document.getElementById('btnIntentReject');
+      const queueCard = document.getElementById('intentRequestQueueCard');
+      const queueTitle = document.getElementById('intentRequestQueueTitle');
+      const queueHint = document.getElementById('intentRequestQueueHint');
+
       if (formTitle) {
         formTitle.innerHTML = isFinancer
-          ? '<i class="fas fa-inbox mr-2 text-amber-600"></i>融资方视角 · 收到意向详情'
+          ? '<i class="fas fa-inbox mr-2 text-amber-600"></i>融资方视角 · 意向处理'
           : '<i class="fas fa-hand-point-up mr-2 text-teal-600"></i>结构化意向填写';
       }
       if (summaryTitle) {
@@ -82,18 +209,22 @@
           ? '<i class="fas fa-reply mr-2 text-amber-600"></i>处理结果'
           : '<i class="fas fa-reply mr-2 text-amber-600"></i>融资方响应';
       }
+
+      const selected = getSelectedIntentRequest(state, false);
+      const canHandle = isFinancer && !!selected && selected.response === 'pending';
       if (formActions) formActions.classList.toggle('hidden', isFinancer);
-      if (responseActions) {
-        const canHandle = isFinancer && !!state.submittedAt && state.response !== 'accepted' && state.response !== 'rejected';
-        responseActions.classList.toggle('hidden', !canHandle);
-      }
+      if (responseActions) responseActions.classList.toggle('hidden', !canHandle);
+
       if (responseTip) {
         responseTip.textContent = isFinancer
-          ? '处理后将自动记录到时间线，并同步更新项目状态。'
+          ? '支持多条意向逐条处理：选择左侧请求后再执行“接受沟通/暂不考虑”。'
           : '验收说明：接受沟通后建议进入条款工作台；暂不考虑则项目留在列表待观察。';
       }
-      if (acceptBtn) acceptBtn.textContent = '接受沟通';
-      if (rejectBtn) rejectBtn.textContent = '暂不考虑';
+
+      if (queueCard) queueCard.classList.toggle('hidden', !isFinancer);
+      if (queueTitle) queueTitle.innerHTML = '<i class="fas fa-inbox mr-2 text-amber-600"></i>收到的意向请求';
+      if (queueHint) queueHint.textContent = '按提交时间展示，优先处理最新请求。';
+
       document.querySelectorAll('#intentFormBody input, #intentFormBody select, #intentFormBody textarea').forEach((el) => {
         el.disabled = isFinancer;
       });
@@ -118,6 +249,7 @@
         checkbox.checked = state.concerns.includes(checkbox.value);
       });
       renderIntentPerspective(state);
+      renderIntentRequestList(state);
       renderIntentSummaryAndResponse(state);
     }
 
@@ -179,14 +311,31 @@
         generateIntentSummary();
         if (!state.summary) return;
       }
-      state.submittedAt = new Date().toISOString();
-      state.response = 'pending';
+
+      const request = {
+        id: 'IR_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        submittedAt: new Date().toISOString(),
+        response: 'pending',
+        summary: state.summary,
+        fromName: currentUser?.displayName || currentUser?.username || '投资方',
+        amountText: getIntentAmountText(state),
+        concerns: (state.concerns || []).slice(),
+        note: state.note || ''
+      };
+
+      state.requests.unshift(request);
+      state.selectedRequestId = request.id;
+      syncLegacyIntentFields(state);
+
       currentDeal.status = 'interested';
-      const original = allDeals.find(d => d.id === currentDeal.id);
+      const original = allDeals.find((d) => d.id === currentDeal.id);
       if (original) original.status = 'interested';
       localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
+
       saveIntentState();
-      pushTimelineEvent('intent_submitted', '提交结构化意向', getPublicTermsFromWorkbench());
+      pushTimelineEvent('intent_submitted', '提交结构化意向（' + request.id + '）', getPublicTermsFromWorkbench());
+      renderIntentRequestList(state);
+      renderIntentPerspective(state);
       renderIntentSummaryAndResponse(state);
       showToast('success', '意向已发送', '融资方将收到结构化意向摘要');
     }
@@ -198,35 +347,49 @@
         return;
       }
       const state = ensureIntentState();
-      if (!state || !state.submittedAt) {
+      if (!state) return;
+
+      const selected = getSelectedIntentRequest(state, false);
+      if (!selected) {
         showToast('warning', '暂无意向可处理', '当前项目尚未收到投资方意向');
         return;
       }
+      if (selected.response !== 'pending') {
+        showToast('info', '该请求已处理', '请切换其他待处理意向请求');
+        return;
+      }
+
       if (status === 'accepted') {
-        state.response = 'accepted';
+        selected.response = 'accepted';
         currentDeal.status = 'interested';
-        const original = allDeals.find(d => d.id === currentDeal.id);
-        if (original) original.status = 'interested';
+        const originalAccepted = allDeals.find((d) => d.id === currentDeal.id);
+        if (originalAccepted) originalAccepted.status = 'interested';
         localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
+        syncLegacyIntentFields(state);
         saveIntentState();
-        pushTimelineEvent('intent_accepted', '融资方接受沟通，进入正式谈判', getPublicTermsFromWorkbench());
+        pushTimelineEvent('intent_accepted', '融资方接受沟通（' + selected.id + '）', getPublicTermsFromWorkbench());
+        renderIntentRequestList(state);
         renderIntentPerspective(state);
         renderIntentSummaryAndResponse(state);
         showToast('success', '已接受意向', '项目可继续进入条款工作台');
         switchSessionTab('workbench');
         return;
       }
+
       if (status === 'rejected') {
-        state.response = 'rejected';
-        currentDeal.status = 'open';
-        const original = allDeals.find(d => d.id === currentDeal.id);
-        if (original) original.status = 'open';
+        selected.response = 'rejected';
+        const hasActive = getIntentRequests(state).some((r) => r.response === 'pending' || r.response === 'accepted');
+        currentDeal.status = hasActive ? 'interested' : 'open';
+        const originalRejected = allDeals.find((d) => d.id === currentDeal.id);
+        if (originalRejected) originalRejected.status = currentDeal.status;
         localStorage.setItem('ec_allDeals', JSON.stringify(allDeals));
+        syncLegacyIntentFields(state);
         saveIntentState();
-        pushTimelineEvent('intent_rejected', '融资方暂不考虑当前意向', getPublicTermsFromWorkbench());
+        pushTimelineEvent('intent_rejected', '融资方暂不考虑当前意向（' + selected.id + '）', getPublicTermsFromWorkbench());
+        renderIntentRequestList(state);
         renderIntentPerspective(state);
         renderIntentSummaryAndResponse(state);
-        showToast('info', '已拒绝当前意向', '项目已回到待参与状态');
+        showToast('info', '已拒绝当前意向', '可继续处理其他意向请求');
       }
     }
 
