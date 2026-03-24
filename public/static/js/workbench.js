@@ -8,12 +8,42 @@
         publicAmountWan: Number((currentDeal.amount / 10000).toFixed(1)),
         publicSharePct: parseFloat(String(currentDeal.revenueShare || '').replace('%', '')) || 10,
         publicAprPct: 14,
-        publicTermMonths: parseInt(currentDeal.period, 10) || 24,
+        publicTermMonths: 24,
         privateRevenueWan: Number(defaultRevenue.toFixed(1)),
         privateSource: 'system'
       };
+      // 初始化时自动推算合作期限
+      workbenchByDeal[dealId].publicTermMonths = computeAutoTermMonths(workbenchByDeal[dealId]);
       saveWorkbenchState();
       return workbenchByDeal[dealId];
+    }
+
+    // 自动推算合作期限：触达月数 × 4，优先用模型预估，无模型则用融资方预估
+    function computeAutoTermMonths(state) {
+      if (!currentDeal || !state) return 24;
+      var fcState = (typeof ensureForecastState === 'function') ? ensureForecastState(currentDeal) : null;
+      var modelRevenue = 0;
+      // 优先用模型预估
+      if (fcState && fcState.systemMonthly && fcState.systemMonthly.length > 0) {
+        modelRevenue = fcState.systemMonthly.slice(0, 12).reduce(function(a, b) { return a + b; }, 0) / 12;
+      }
+      // 如果无模型预估（如项目不满6个月），回退到融资方预估
+      if (modelRevenue <= 0 && fcState && fcState.borrowerMonthly && fcState.borrowerMonthly.length > 0) {
+        modelRevenue = fcState.borrowerMonthly.slice(0, 12).reduce(function(a, b) { return a + b; }, 0) / 12;
+      }
+      if (modelRevenue <= 0) return 24;
+
+      var amountWan = state.publicAmountWan;
+      var sharePct = state.publicSharePct;
+      var aprPct = state.publicAprPct;
+      var monthlyPayback = modelRevenue * sharePct / 100;
+      var touchDen = monthlyPayback - amountWan * aprPct / 100 / 12;
+
+      if (touchDen > 0 && amountWan > 0) {
+        var touch = amountWan / touchDen;
+        return Math.max(1, Math.round(touch * 4));
+      }
+      return 24;
     }
 
     function formatWan(v) {
@@ -80,6 +110,11 @@
     function recalcWorkbench() {
       const state = ensureWorkbenchState();
       if (!state || !currentDeal) return;
+      // 自动推算合作期限
+      state.publicTermMonths = computeAutoTermMonths(state);
+      var termEl = document.getElementById('wbTerm');
+      if (termEl) termEl.value = String(state.publicTermMonths);
+      saveWorkbenchState();
       const derived = computeWorkbenchDerived(state);
       workbenchDerivedByDeal[currentDeal.id] = derived;
 
@@ -134,10 +169,8 @@
       state.publicAmountWan = parseWanValue(document.getElementById('wbAmount')?.value || state.publicAmountWan);
       const share = parseFloat(document.getElementById('wbShare')?.value || String(state.publicSharePct));
       const apr = parseFloat(document.getElementById('wbApr')?.value || String(state.publicAprPct));
-      const term = parseInt(document.getElementById('wbTerm')?.value || String(state.publicTermMonths), 10);
       state.publicSharePct = Number.isFinite(share) ? share : state.publicSharePct;
       state.publicAprPct = Number.isFinite(apr) ? apr : state.publicAprPct;
-      state.publicTermMonths = Number.isFinite(term) ? term : state.publicTermMonths;
       state.privateRevenueWan = parseWanValue(document.getElementById('wbRevenue')?.value || state.privateRevenueWan);
       const sourceVal = document.getElementById('wbRevenueSource')?.value || state.privateSource;
       state.privateSource = sourceVal;
