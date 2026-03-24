@@ -446,10 +446,12 @@
           .map(function(p) { return [toX(histLen + p.monthIdx), toY(p.value)]; });
       }
 
-      // 水平线
+      // 水平线（仅预估区域，实线）
       function flatLine(value, color) {
         var y = toY(value).toFixed(1);
-        return '<line x1="' + padL + '" y1="' + y + '" x2="' + (svgW - padR) + '" y2="' + y + '" stroke="' + color + '" stroke-width="2" stroke-dasharray="6,4" />';
+        var x1 = toX(histLen).toFixed(1);
+        var x2 = (svgW - padR).toFixed(1);
+        return '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="' + color + '" stroke-width="2" />';
       }
 
       // Y轴网格+标签（加"万"单位）
@@ -469,40 +471,41 @@
         dividerLine = '<line x1="' + dx + '" y1="' + padT + '" x2="' + dx + '" y2="' + (svgH - padB) + '" stroke="#d1d5db" stroke-width="1" stroke-dasharray="4,3" />';
       }
 
-      // X轴标签 — 优化间距避免重叠
+      // X轴标签 — 根据总slot数计算最小像素间距，防重叠
       var xLabels = '';
       var now = new Date();
       var baseYear = now.getFullYear();
       var baseMonth = now.getMonth();
+      var minLabelGap = 55; // 标签最小像素间距
 
-      // 历史区间标签：每隔2个月显示一次（6个月内最多3个标签）
+      // 收集所有候选标签 [{slot, label}]
+      var candidateLabels = [];
+
+      // 历史区间
       if (histLen > 0) {
-        var histStep = histLen <= 3 ? 1 : 2;
-        for (var i = 0; i < histLen; i += histStep) {
+        for (var i = 0; i < histLen; i++) {
           var offset = -(histLen - i);
           var hm = ((baseMonth + offset) % 12 + 12) % 12;
           var hy = baseYear + Math.floor((baseMonth + offset) / 12);
-          var hx = toX(i).toFixed(1);
-          xLabels += '<text x="' + hx + '" y="' + (svgH - 6) + '" font-size="9" fill="#94a3b8" text-anchor="middle" font-family="Inter,sans-serif">' + hy + '/' + (hm + 1) + '</text>';
+          candidateLabels.push({ slot: i, label: hy + '/' + (hm + 1), color: '#94a3b8' });
         }
       }
 
-      // 预估区间标签 — 根据范围自适应间距
-      var forecastStep;
-      if (rangeMonths <= 12) {
-        forecastStep = 1;     // 近1年：每月
-      } else if (rangeMonths <= 36) {
-        forecastStep = 6;     // 近3年：每半年
-      } else {
-        forecastStep = 12;    // 近5年：每年
-      }
-
-      for (var i = 0; i < rangeMonths; i += forecastStep) {
+      // 预估区间
+      for (var i = 0; i < rangeMonths; i++) {
         var fm = (baseMonth + i) % 12;
         var fy = baseYear + Math.floor((baseMonth + i) / 12);
-        var fx = toX(histLen + i).toFixed(1);
-        var label = rangeMonths <= 12 ? fy + '/' + (fm + 1) : fy + '/' + (fm + 1);
-        xLabels += '<text x="' + fx + '" y="' + (svgH - 6) + '" font-size="9" fill="#9ca3af" text-anchor="middle" font-family="Inter,sans-serif">' + label + '</text>';
+        candidateLabels.push({ slot: histLen + i, label: fy + '/' + (fm + 1), color: '#9ca3af' });
+      }
+
+      // 按最小像素间距过滤：贪心选取
+      var lastLabelX = -Infinity;
+      for (var ci = 0; ci < candidateLabels.length; ci++) {
+        var cx = toX(candidateLabels[ci].slot);
+        if (cx - lastLabelX >= minLabelGap || ci === 0) {
+          xLabels += '<text x="' + cx.toFixed(1) + '" y="' + (svgH - 6) + '" font-size="9" fill="' + candidateLabels[ci].color + '" text-anchor="middle" font-family="Inter,sans-serif">' + candidateLabels[ci].label + '</text>';
+          lastLabelX = cx;
+        }
       }
 
       // 所有曲线使用 smoothPath（Catmull-Rom 平滑）
@@ -547,10 +550,14 @@
             }
           }
         }
+        var slotCx = toX(s).toFixed(1);
         tooltipAreas +=
           '<rect x="' + rx.toFixed(1) + '" y="' + padT + '" width="' + barW.toFixed(1) + '" height="' + plotH + '" fill="transparent" class="fc-hover-rect"' +
-          ' data-hist="' + histVal + '" data-sys="' + sysVal + '" data-bor="' + borVal + '" data-self="' + selfVal + '" data-ishist="' + (isHist ? '1' : '0') + '" />';
+          ' data-cx="' + slotCx + '" data-hist="' + histVal + '" data-sys="' + sysVal + '" data-bor="' + borVal + '" data-self="' + selfVal + '" data-ishist="' + (isHist ? '1' : '0') + '" />';
       }
+
+      // 纵向参考线（hover时显示）
+      var crosshairLine = '<line id="fcCrosshair" x1="0" y1="' + padT + '" x2="0" y2="' + (svgH - padB) + '" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,3" style="display:none;" />';
 
       container.innerHTML =
         '<svg viewBox="0 0 ' + svgW + ' ' + svgH + '" class="w-full h-full" style="overflow:visible;">' +
@@ -561,15 +568,23 @@
           borLine +
           selfLine +
           xLabels +
+          crosshairLine +
           tooltipAreas +
         '</svg>' +
         '<div id="fcTooltip" class="hidden absolute bg-gray-800 text-white text-[10px] rounded-lg px-2 py-1.5 pointer-events-none shadow-lg z-10" style="white-space:nowrap;"></div>';
 
       // Hover listeners
+      var crosshair = container.querySelector('#fcCrosshair');
       container.querySelectorAll('.fc-hover-rect').forEach(function(rect) {
         rect.addEventListener('mouseenter', function(e) {
           var tip = document.getElementById('fcTooltip');
           if (!tip) return;
+          // 显示纵向参考线
+          if (crosshair) {
+            crosshair.setAttribute('x1', this.dataset.cx);
+            crosshair.setAttribute('x2', this.dataset.cx);
+            crosshair.style.display = '';
+          }
           if (this.dataset.ishist === '1') {
             tip.innerHTML = '<span style="color:#cbd5e1;">历史实际: ' + this.dataset.hist + '万</span>';
           } else {
@@ -590,6 +605,7 @@
         rect.addEventListener('mouseleave', function() {
           var tip = document.getElementById('fcTooltip');
           if (tip) tip.classList.add('hidden');
+          if (crosshair) crosshair.style.display = 'none';
         });
       });
     }
