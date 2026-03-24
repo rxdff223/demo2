@@ -376,10 +376,15 @@ export const MAIN_HTML = `
           </div>
         </div>
         <div class="flex items-center space-x-1.5">
+          <button id="detailPerspectiveBtn" onclick="togglePerspective()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all" style="color:#a16207;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.16)">
+            <i id="detailPerspectiveIcon" class="fas fa-arrows-rotate text-xs"></i>
+            <span id="detailPerspectiveText">切换融资方视角</span>
+          </button>
+          <div class="w-px h-6 bg-gray-200 mx-1"></div>
           <button onclick="showToast('info','分享','分享链接已复制')" class="tooltip p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 text-sm" data-tip="分享"><i class="fas fa-share-alt"></i></button>
           <button onclick="showToast('info','收藏','已添加到收藏夹')" class="tooltip p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 text-sm" data-tip="收藏"><i class="fas fa-bookmark"></i></button>
           <div class="w-px h-6 bg-gray-200 mx-1"></div>
-          <button onclick="expressIntent()" id="btnExpressIntent" class="btn-primary text-xs py-1.5 px-4" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);"><i class="fas fa-hand-point-up mr-1"></i>我要参与</button>
+          <button onclick="expressIntent()" id="btnExpressIntent" class="investor-only btn-primary text-xs py-1.5 px-4" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);"><i class="fas fa-hand-point-up mr-1"></i>我要参与</button>
         </div>
       </div>
     </nav>
@@ -410,12 +415,12 @@ export const MAIN_HTML = `
 
     <!-- Tab: 做功课 -->
     <div id="sessionTab-research" class="flex flex-1 overflow-hidden">
-      <div class="w-2/5 border-r border-gray-200 flex flex-col bg-white overflow-y-auto">
+      <div id="researchLeftPanel" class="w-2/5 border-r border-gray-200 flex flex-col bg-white overflow-y-auto">
         <div class="p-5" id="detailLeft">
           <div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">加载中...</p></div>
         </div>
       </div>
-      <div class="w-3/5 flex flex-col bg-slate-50 overflow-y-auto">
+      <div class="w-3/5 flex flex-col bg-slate-50 overflow-y-auto investor-only">
         <div class="p-3 border-b border-gray-200 bg-white flex items-center justify-between">
           <div class="flex items-center space-x-2"><span class="text-sm font-semibold text-gray-700"><i class="fas fa-book-open mr-1.5 text-cyan-500"></i>做功课工作台</span></div>
           <div class="flex bg-gray-100 rounded-lg p-0.5">
@@ -543,12 +548,12 @@ export const MAIN_HTML = `
               <div>
                 <label class="block text-xs text-gray-500 mb-1">融资金额（万）</label>
                 <input id="wbAmount" type="number" min="1" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="updateWorkbenchAndRecalc()">
-                <button onclick="applySuggestedAmount()" class="w-full mt-1.5 px-2 py-1.5 text-[11px] font-medium rounded-lg border border-dashed border-amber-400 text-amber-600 hover:bg-amber-50 hover:text-amber-700">按照分成比例推算融资金额</button>
+                <button onclick="applySuggestedAmount()" class="investor-only w-full mt-1.5 px-2 py-1.5 text-[11px] font-medium rounded-lg border border-dashed border-amber-400 text-amber-600 hover:bg-amber-50 hover:text-amber-700">按照分成比例推算融资金额</button>
               </div>
               <div>
                 <label class="block text-xs text-gray-500 mb-1">分成比例（%）</label>
                 <input id="wbShare" type="number" step="0.1" min="0.1" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" oninput="updateWorkbenchAndRecalc()">
-                <button onclick="applySuggestedShare()" class="w-full mt-1.5 px-2 py-1.5 text-[11px] font-medium rounded-lg border border-dashed border-amber-400 text-amber-600 hover:bg-amber-50 hover:text-amber-700">按照融资金额推算分成比例</button>
+                <button onclick="applySuggestedShare()" class="investor-only w-full mt-1.5 px-2 py-1.5 text-[11px] font-medium rounded-lg border border-dashed border-amber-400 text-amber-600 hover:bg-amber-50 hover:text-amber-700">按照融资金额推算分成比例</button>
               </div>
               <div>
                 <label class="block text-xs text-gray-500 mb-1">YITO封顶APR（%）</label>
@@ -558,11 +563,11 @@ export const MAIN_HTML = `
                 <label class="block text-xs text-gray-500 mb-1">合作期限（月）<span class="text-gray-400 ml-1">自动推算</span></label>
                 <input id="wbTerm" type="number" min="1" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed" disabled>
               </div>
-              <button onclick="submitWorkbenchProposal()" class="w-full mt-1 px-3 py-2 text-xs font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700">提交方案（草稿）</button>
+              <button onclick="submitWorkbenchProposal()" class="investor-only w-full mt-1 px-3 py-2 text-xs font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700">提交方案（草稿）</button>
             </div>
           </div>
 
-          <div class="bg-white rounded-2xl border border-gray-100 p-4">
+          <div class="bg-white rounded-2xl border border-gray-100 p-4 investor-only">
             <div class="flex items-center justify-between mb-3">
               <h4 class="text-sm font-bold text-gray-800"><i class="fas fa-lock mr-1.5 text-indigo-500"></i>私有预测区</h4>
               <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">仅自己可见</span>
@@ -584,7 +589,7 @@ export const MAIN_HTML = `
             </div>
           </div>
 
-          <div class="bg-white rounded-2xl border border-gray-100 p-4">
+          <div class="bg-white rounded-2xl border border-gray-100 p-4 investor-only">
             <div class="flex items-center justify-between mb-3">
               <h4 class="text-sm font-bold text-gray-800"><i class="fas fa-function mr-1.5 text-amber-500"></i>派生指标区</h4>
               <span class="text-[10px] px-2 py-0.5 rounded bg-amber-50 text-amber-700">仅自己可见</span>
@@ -607,7 +612,7 @@ export const MAIN_HTML = `
     <!-- Tab: 表达意向 -->
     <div id="sessionTab-intent" class="hidden flex-1 overflow-y-auto p-5">
       <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <div class="bg-white rounded-2xl border border-gray-100 p-5 investor-only">
           <h3 class="text-base font-bold text-gray-900 mb-4"><i class="fas fa-hand-point-up mr-2 text-teal-600"></i>结构化意向填写</h3>
           <div class="space-y-3">
             <div>

@@ -28,6 +28,7 @@
     .user-dropdown-item.danger:hover { background: #fef2f2; color: #dc2626; }
     .user-dropdown-divider { height: 1px; background: #f1f5f9; margin: 4px 0; }
     body[data-perspective="financer"] .investor-only { display: none !important; }
+    body:not([data-perspective="financer"]) .financer-only { display: none !important; }
     body[data-perspective="financer"] #dashboardHero {
       background: linear-gradient(135deg, #3a2a19 0%, #6b3e14 42%, #b45309 100%) !important;
     }

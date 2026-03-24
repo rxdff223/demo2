@@ -35,6 +35,8 @@
 
     function updatePerspectiveUI() {
       const isFinancer = currentPerspective === 'financer';
+
+      // ---- Dashboard toggle button ----
       const btn = document.getElementById('perspectiveToggleBtn');
       const icon = document.getElementById('perspectiveToggleIcon');
       const text = document.getElementById('perspectiveToggleText');
@@ -51,6 +53,35 @@
       }
       if (icon) icon.className = isFinancer ? 'fas fa-rotate-left text-xs' : 'fas fa-arrows-rotate text-xs';
       if (text) text.textContent = isFinancer ? '返回投资者视角' : '切换融资方视角';
+
+      // ---- Detail view toggle button ----
+      var dBtn = document.getElementById('detailPerspectiveBtn');
+      var dIcon = document.getElementById('detailPerspectiveIcon');
+      var dText = document.getElementById('detailPerspectiveText');
+      if (dBtn) {
+        if (isFinancer) {
+          dBtn.style.color = '#0f766e';
+          dBtn.style.background = 'rgba(13,148,136,0.10)';
+          dBtn.style.border = '1px solid rgba(13,148,136,0.25)';
+        } else {
+          dBtn.style.color = '#a16207';
+          dBtn.style.background = 'rgba(245,158,11,0.08)';
+          dBtn.style.border = '1px solid rgba(245,158,11,0.16)';
+        }
+      }
+      if (dIcon) dIcon.className = isFinancer ? 'fas fa-rotate-left text-xs' : 'fas fa-arrows-rotate text-xs';
+      if (dText) dText.textContent = isFinancer ? '返回投资者视角' : '切换融资方视角';
+
+      // ---- Detail view: research tab layout (financer: full width left panel) ----
+      var researchLeft = document.getElementById('researchLeftPanel');
+      if (researchLeft) {
+        researchLeft.classList.toggle('w-2/5', !isFinancer);
+        researchLeft.classList.toggle('w-full', isFinancer);
+        researchLeft.classList.toggle('border-r', !isFinancer);
+      }
+
+      // ---- Detail view: session tab active color ----
+      if (typeof currentSessionTab !== 'undefined') switchSessionTab(currentSessionTab);
       const aiRecommendBtn = document.getElementById('aiRecommendBtn');
       if (aiRecommendBtn) {
         if (isFinancer) {
@@ -101,6 +132,21 @@
       const kybHintLine = document.getElementById('kybHintLine');
       if (kybHintLine) kybHintLine.style.display = isFinancer ? 'none' : '';
       setDashboardViewMode(dashboardViewMode);
+
+      // ---- Workbench panel: single column for financer (only public terms visible) ----
+      var wbPanel = document.getElementById('workbenchPanel');
+      if (wbPanel) {
+        wbPanel.classList.toggle('lg:grid-cols-3', !isFinancer);
+        wbPanel.classList.toggle('lg:grid-cols-1', isFinancer);
+        wbPanel.classList.toggle('max-w-md', isFinancer);
+      }
+
+      // ---- Intent tab: full width for financer (response section only) ----
+      var intentGrid = document.querySelector('#sessionTab-intent > div');
+      if (intentGrid) {
+        intentGrid.classList.toggle('lg:grid-cols-2', !isFinancer);
+        intentGrid.classList.toggle('lg:grid-cols-1', isFinancer);
+      }
     }
 
     function playPerspectiveFlip() {
@@ -140,16 +186,24 @@
 
     function switchSessionTab(tab) {
       currentSessionTab = tab;
+      var isFinancer = currentPerspective === 'financer';
+      var activeBg = isFinancer ? 'bg-amber-50' : 'bg-teal-50';
+      var activeText = isFinancer ? 'text-amber-700' : 'text-teal-700';
+      var inactiveBg = isFinancer ? 'bg-teal-50' : 'bg-amber-50';
+      var inactiveText = isFinancer ? 'text-teal-700' : 'text-amber-700';
       const tabs = ['research', 'forecast', 'workbench', 'intent', 'negotiation', 'timeline'];
       tabs.forEach(t => {
         const panel = document.getElementById('sessionTab-' + t);
         const btn = document.getElementById('sessionTabBtn-' + t);
         if (panel) panel.classList.toggle('hidden', t !== tab);
         if (btn) {
-          btn.classList.toggle('bg-teal-50', t === tab);
-          btn.classList.toggle('text-teal-700', t === tab);
-          btn.classList.toggle('text-gray-600', t !== tab);
-          btn.classList.toggle('hover:bg-gray-50', t !== tab);
+          btn.classList.remove('bg-teal-50', 'bg-amber-50', 'text-teal-700', 'text-amber-700');
+          if (t === tab) {
+            btn.classList.add(activeBg, activeText);
+            btn.classList.remove('text-gray-600', 'hover:bg-gray-50');
+          } else {
+            btn.classList.add('text-gray-600', 'hover:bg-gray-50');
+          }
         }
       });
       if (tab === 'forecast') renderForecastTab();
