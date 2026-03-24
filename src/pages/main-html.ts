@@ -750,7 +750,6 @@ export const MAIN_HTML = `
         </div>
       </div>
     </div>
-    </div>
 
     <!-- Tab: 时间线 -->
     <div id="sessionTab-timeline" class="hidden flex-1 overflow-y-auto p-5">
