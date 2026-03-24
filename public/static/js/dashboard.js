@@ -3,6 +3,7 @@
       const grid = document.getElementById('dealGrid');
       const empty = document.getElementById('emptyState');
       const searchVal = (document.getElementById('dealSearch')?.value || '').toLowerCase();
+      updateDealSearchClearBtn();
       const filterVal = document.getElementById('filterStatus')?.value || 'all';
       const industryVal = document.getElementById('filterIndustry')?.value || 'all';
       const sortVal = document.getElementById('sortBy')?.value || 'push_desc';
@@ -108,6 +109,22 @@
           '</div>' +
         '</div>';
       }).join('');
+    }
+
+    function updateDealSearchClearBtn() {
+      const input = document.getElementById('dealSearch');
+      const clearBtn = document.getElementById('dealSearchClear');
+      if (!input || !clearBtn) return;
+      clearBtn.classList.toggle('hidden', !input.value);
+    }
+
+    function clearDealSearch() {
+      const input = document.getElementById('dealSearch');
+      if (!input) return;
+      input.value = '';
+      updateDealSearchClearBtn();
+      renderDeals();
+      input.focus();
     }
 
     function handleDealCardClick(id) {

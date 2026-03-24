@@ -289,7 +289,12 @@ export const MAIN_HTML = `
               <button id="viewModeStore" onclick="setDashboardViewMode('store')" class="px-2.5 py-1 text-xs font-semibold rounded-md bg-teal-50 text-teal-700">项目视图</button>
               <button id="viewModeBrand" onclick="setDashboardViewMode('brand')" class="px-2.5 py-1 text-xs font-semibold rounded-md text-gray-600 hover:bg-gray-50">品牌视图</button>
             </div>
-            <div class="relative"><input type="text" id="dealSearch" placeholder="搜索公司/品牌/项目/行业/地区" class="search-input px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white w-56" oninput="renderDeals()"></div>
+            <div class="relative">
+              <input type="text" id="dealSearch" placeholder="搜索公司/品牌/项目/行业/地区" class="search-input px-3 pr-7 py-1.5 border border-gray-200 rounded-lg text-xs bg-white w-56" oninput="renderDeals(); updateDealSearchClearBtn();">
+              <button id="dealSearchClear" onclick="clearDealSearch()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs leading-none" aria-label="清空搜索">
+                <i class="fas fa-times-circle"></i>
+              </button>
+            </div>
             <select class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white" id="filterIndustry" onchange="renderDeals()">
               <option value="all">全部行业</option>
               <option value="餐饮">餐饮</option>
