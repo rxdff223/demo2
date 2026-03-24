@@ -141,13 +141,6 @@
         renderIntentTab();
       }
       setDashboardViewMode(dashboardViewMode);
-
-      // ---- Intent tab: full width for financer (response section only) ----
-      var intentGrid = document.querySelector('#sessionTab-intent > div');
-      if (intentGrid) {
-        intentGrid.classList.toggle('lg:grid-cols-2', !isFinancer);
-        intentGrid.classList.toggle('lg:grid-cols-1', isFinancer);
-      }
     }
 
     function playPerspectiveFlip() {
