@@ -534,6 +534,13 @@
         var rx = toX(s) - barW / 2;
         var isHist = s < histLen;
         var histVal = '--', sysVal = '--', borVal = '--', selfVal = '--';
+
+        // 计算该slot对应的年/月
+        var slotOffset = isHist ? -(histLen - s) : (s - histLen);
+        var slotM = ((baseMonth + slotOffset) % 12 + 12) % 12;
+        var slotY = baseYear + Math.floor((baseMonth + slotOffset) / 12);
+        var slotDate = slotY + '年' + (slotM + 1) + '月';
+
         if (isHist) {
           var hi = histData.length - histLen + s;
           histVal = hi >= 0 && hi < histData.length ? histData[hi].toFixed(1) : '--';
@@ -553,7 +560,7 @@
         var slotCx = toX(s).toFixed(1);
         tooltipAreas +=
           '<rect x="' + rx.toFixed(1) + '" y="' + padT + '" width="' + barW.toFixed(1) + '" height="' + plotH + '" fill="transparent" class="fc-hover-rect"' +
-          ' data-cx="' + slotCx + '" data-hist="' + histVal + '" data-sys="' + sysVal + '" data-bor="' + borVal + '" data-self="' + selfVal + '" data-ishist="' + (isHist ? '1' : '0') + '" />';
+          ' data-cx="' + slotCx + '" data-date="' + slotDate + '" data-hist="' + histVal + '" data-sys="' + sysVal + '" data-bor="' + borVal + '" data-self="' + selfVal + '" data-ishist="' + (isHist ? '1' : '0') + '" />';
       }
 
       // 纵向参考线（hover时显示）
@@ -585,10 +592,11 @@
             crosshair.setAttribute('x2', this.dataset.cx);
             crosshair.style.display = '';
           }
+          var dateHtml = '<span style="color:#e2e8f0;font-weight:600;">' + this.dataset.date + '</span><br>';
           if (this.dataset.ishist === '1') {
-            tip.innerHTML = '<span style="color:#cbd5e1;">历史实际: ' + this.dataset.hist + '万</span>';
+            tip.innerHTML = dateHtml + '<span style="color:#cbd5e1;">历史实际: ' + this.dataset.hist + '万</span>';
           } else {
-            tip.innerHTML =
+            tip.innerHTML = dateHtml +
               '<span style="color:#5eead4;">模型: ' + this.dataset.sys + '万</span><br>' +
               '<span style="color:#7dd3fc;">融资方: ' + this.dataset.bor + '万</span><br>' +
               '<span style="color:#fcd34d;">自填: ' + this.dataset.self + '万</span>';
