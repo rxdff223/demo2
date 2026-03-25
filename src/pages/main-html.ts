@@ -735,6 +735,7 @@ export const MAIN_HTML = `
           </div>
         </div>
       </div>
+    </div>
 
     <!-- Tab: 沟通备忘录 -->
     <div id="sessionTab-memo" class="hidden flex-1 overflow-y-auto p-5">
