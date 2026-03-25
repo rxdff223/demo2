@@ -55,25 +55,28 @@
       const savedResearch = researchInputsByDeal[currentDeal.id] || {};
       const onePagerSummary = '项目「' + currentDeal.name + '」属于' + currentDeal.industry + '行业，当前AI评分' + currentDeal.aiScore + '，分成比例' + currentDeal.revenueShare + '，拟融资' + (currentDeal.amount/10000).toFixed(0) + '万。结合运营年限' + currentDeal.operatingYears + '年与风控评级' + (currentDeal.riskGrade || 'N/A') + '，建议重点核验现金流稳定性和季节波动。';
       const riskHint = parseFloat(currentDeal.aiScore) >= 8.5 ? '风险整体可控，建议重点关注扩张节奏与回款稳定性。' : '建议加强风控复核，重点校验营收波动与团队执行力。';
-      // 生成各筛子的评估结果（只评估用户面板中的筛子）
+      // 生成各筛子的评估结果（只评估用户面板中的筛子，融资方视角不渲染）
+      var isFinancerView = currentPerspective === 'financer';
       let sieveResults = '';
-      mySieves.forEach(key => {
-        const sieve = SIEVE_LIBRARY[key];
-        if (!sieve) return;
-        const testResult = sieve.filter([currentDeal]);
-        const passed = testResult.length > 0;
-        const score = passed ? testResult[0].matchScore : Math.floor(Math.random() * 35 + 10);
-        const barColor = passed ? '#10b981' : '#ef4444';
-        sieveResults += '<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">' +
-          '<div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background: ' + (passed ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)') + ';"><i class="fas ' + sieve.icon + '" style="color:' + (passed ? '#10b981' : '#ef4444') + '; font-size:12px;"></i></div>' +
-          '<div class="flex-1 min-w-0">' +
-            '<div class="flex items-center justify-between mb-1"><span class="text-xs font-semibold text-gray-700">' + sieve.name + '</span><span class="sieve-tag ' + (passed ? 'sieve-pass' : 'sieve-fail') + '">' + (passed ? '<i class="fas fa-check" style="font-size:8px;"></i>通过' : '<i class="fas fa-times" style="font-size:8px;"></i>未通过') + '</span></div>' +
-            '<div class="match-bar"><div class="match-bar-fill" style="width:' + score + '%; background:' + barColor + ';"></div></div>' +
-            '<p class="text-xs text-gray-400 mt-1">' + score + '% 匹配度</p>' +
-          '</div></div>';
-      });
-      if (mySieves.length === 0) {
-        sieveResults = '<div class="text-center py-4"><p class="text-sm text-gray-400">暂未添加筛子</p><button onclick="goToDashboard(); setTimeout(showSieveManager, 300);" class="text-xs text-cyan-600 mt-1 hover:underline">去管理筛子</button></div>';
+      if (!isFinancerView) {
+        mySieves.forEach(key => {
+          const sieve = SIEVE_LIBRARY[key];
+          if (!sieve) return;
+          const testResult = sieve.filter([currentDeal]);
+          const passed = testResult.length > 0;
+          const score = passed ? testResult[0].matchScore : Math.floor(Math.random() * 35 + 10);
+          const barColor = passed ? '#10b981' : '#ef4444';
+          sieveResults += '<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">' +
+            '<div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background: ' + (passed ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)') + ';"><i class="fas ' + sieve.icon + '" style="color:' + (passed ? '#10b981' : '#ef4444') + '; font-size:12px;"></i></div>' +
+            '<div class="flex-1 min-w-0">' +
+              '<div class="flex items-center justify-between mb-1"><span class="text-xs font-semibold text-gray-700">' + sieve.name + '</span><span class="sieve-tag ' + (passed ? 'sieve-pass' : 'sieve-fail') + '">' + (passed ? '<i class="fas fa-check" style="font-size:8px;"></i>通过' : '<i class="fas fa-times" style="font-size:8px;"></i>未通过') + '</span></div>' +
+              '<div class="match-bar"><div class="match-bar-fill" style="width:' + score + '%; background:' + barColor + ';"></div></div>' +
+              '<p class="text-xs text-gray-400 mt-1">' + score + '% 匹配度</p>' +
+            '</div></div>';
+        });
+        if (mySieves.length === 0) {
+          sieveResults = '<div class="text-center py-4"><p class="text-sm text-gray-400">暂未添加筛子</p><button onclick="goToDashboard(); setTimeout(showSieveManager, 300);" class="text-xs text-cyan-600 mt-1 hover:underline">去管理筛子</button></div>';
+        }
       }
 
       const comparableCases = industryRef.cases.map((item, idx) =>
@@ -95,7 +98,7 @@
               '<div class="p-3 rounded-xl bg-amber-50"><p class="text-xs text-gray-500">主体信息</p><p class="text-sm font-bold text-amber-700 mt-1">' + (currentDeal.companyName || currentDeal.originator || '融资主体') + '</p></div>' +
               '<div class="p-3 rounded-xl bg-rose-50"><p class="text-xs text-gray-500">风险标注</p><p class="text-sm font-bold text-rose-700 mt-1">' + riskHint + '</p></div>' +
             '</div>' +
-            (hasMatch ? '<div class="p-3 bg-gray-50 rounded-xl border border-gray-100"><div class="flex items-center justify-between"><p class="text-xs font-medium text-gray-600">当前筛子匹配度</p><p class="text-sm font-bold" style="color:' + matchColor + ';">' + currentDeal.matchScore + '%</p></div><div class="match-bar mt-2"><div class="match-bar-fill" style="width:' + currentDeal.matchScore + '%; background:' + matchColor + ';"></div></div></div>' : '') +
+            (!isFinancerView && hasMatch ? '<div class="p-3 bg-gray-50 rounded-xl border border-gray-100"><div class="flex items-center justify-between"><p class="text-xs font-medium text-gray-600">当前筛子匹配度</p><p class="text-sm font-bold" style="color:' + matchColor + ';">' + currentDeal.matchScore + '%</p></div><div class="match-bar mt-2"><div class="match-bar-fill" style="width:' + currentDeal.matchScore + '%; background:' + matchColor + ';"></div></div></div>' : '') +
           '</div>' +
           // 同行业成交参考
           '<div id="sectionComparables" class="bg-white rounded-2xl p-5 border border-gray-100">' +
@@ -116,18 +119,9 @@
             '</div>' +
             (savedResearch.predictedMonthlyRevenue ? '<p class="text-xs text-teal-600 mt-2">上次预测：' + savedResearch.predictedMonthlyRevenue.toFixed(1) + '万/月</p>' : '<p class="text-xs text-gray-400 mt-2">尚未计算，前往营业额预估工作台开始。</p>') +
           '</div>' +
-          // 筛子评估结果（辅助）
-          '<div class="bg-white rounded-2xl p-5 border border-gray-100"><h3 class="text-sm font-bold text-gray-800 mb-4"><i class="fas fa-filter mr-1.5 text-cyan-500"></i>筛子评估（辅助参考）</h3><div class="space-y-3">' + sieveResults + '</div>' +
-          '<p class="text-xs text-gray-400 mt-3">说明：做功课阶段建议优先结合一页纸和同行参考，再用筛子结果做交叉验证。</p></div>' +
-          // 项目流向
-          '<div class="bg-white rounded-2xl p-5 border border-gray-100"><h3 class="text-sm font-bold text-gray-800 mb-4"><i class="fas fa-route mr-1.5 text-amber-500"></i>项目流向</h3><div class="space-y-4">' +
-          [
-            { icon: 'fa-paper-plane', color: 'amber', title: '发起通 — 项目提交', desc: currentDeal.originator + ' · ' + currentDeal.originateDate },
-            { icon: 'fa-filter', color: 'cyan', title: '评估通 — AI筛选', desc: '通过 ' + (hasMatch ? currentDeal.matchScore + '% 匹配' : '基础审核') },
-            { icon: 'fa-book-open', color: 'teal', title: '参与通 — 做功课', desc: '一页纸 + 同行参考 + 营业额预估' },
-            { icon: 'fa-file-contract', color: 'gray', title: '条款通 → 合约通', desc: '确认参与后进入条款协商' }
-          ].map(t => '<div class="flex items-start space-x-3"><div class="w-8 h-8 rounded-lg bg-' + t.color + '-100 flex items-center justify-center flex-shrink-0"><i class="fas ' + t.icon + ' text-' + t.color + '-600 text-xs"></i></div><div><p class="text-sm font-medium text-gray-700">' + t.title + '</p><p class="text-xs text-gray-400">' + t.desc + '</p></div></div>').join('') +
-          '</div></div>' +
+          // 筛子评估结果（辅助）— 融资方视角不显示
+          (!isFinancerView ? '<div class="bg-white rounded-2xl p-5 border border-gray-100"><h3 class="text-sm font-bold text-gray-800 mb-4"><i class="fas fa-filter mr-1.5 text-cyan-500"></i>筛子评估（辅助参考）</h3><div class="space-y-3">' + sieveResults + '</div>' +
+          '<p class="text-xs text-gray-400 mt-3">说明：做功课阶段建议优先结合一页纸和同行参考，再用筛子结果做交叉验证。</p></div>' : '') +
         '</div>';
 
       switchDetailView('onepager');

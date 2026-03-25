@@ -72,12 +72,11 @@
       if (dIcon) dIcon.className = isFinancer ? 'fas fa-rotate-left text-xs' : 'fas fa-arrows-rotate text-xs';
       if (dText) dText.textContent = isFinancer ? '切换投资方视角' : '切换融资方视角';
 
-      // ---- Detail view: research tab layout (financer: full width left panel) ----
+      // ---- Detail view: research tab layout (both perspectives keep 2/5 + 3/5) ----
       var researchLeft = document.getElementById('researchLeftPanel');
       if (researchLeft) {
-        researchLeft.classList.toggle('w-2/5', !isFinancer);
-        researchLeft.classList.toggle('w-full', isFinancer);
-        researchLeft.classList.toggle('border-r', !isFinancer);
+        researchLeft.classList.add('w-2/5', 'border-r');
+        researchLeft.classList.remove('w-full');
       }
 
       // ---- Detail view: session tab active color ----
@@ -165,6 +164,10 @@
         selectSieve('all');
       } else if (currentUser && typeof renderDeals === 'function') {
         renderDeals();
+      }
+      // 视角切换后，若当前在项目会话页且有选中项目，重新渲染做功课内容
+      if (changed && currentDeal && typeof openDetail === 'function') {
+        openDetail(currentDeal.id);
       }
       if (options.animate !== false && changed) playPerspectiveFlip();
 
