@@ -420,7 +420,7 @@ export const MAIN_HTML = `
           <div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">加载中...</p></div>
         </div>
       </div>
-      <div class="w-3/5 flex flex-col bg-slate-50 overflow-y-auto investor-only">
+      <div class="w-3/5 flex flex-col bg-slate-50 overflow-y-auto">
         <div class="p-3 border-b border-gray-200 bg-white flex items-center justify-between">
           <div class="flex items-center space-x-2"><span class="text-sm font-semibold text-gray-700"><i class="fas fa-book-open mr-1.5 text-cyan-500"></i>做功课工作台</span></div>
           <div class="flex bg-gray-100 rounded-lg p-0.5">
