@@ -163,6 +163,10 @@
       } else if (currentUser && typeof renderDeals === 'function') {
         renderDeals();
       }
+      // 视角切换后，若当前在项目会话页且有选中项目，重新渲染做功课内容
+      if (changed && currentDeal && typeof openDetail === 'function') {
+        openDetail(currentDeal.id);
+      }
       if (options.animate !== false && changed) playPerspectiveFlip();
 
       if (options.toast !== false && changed) {
