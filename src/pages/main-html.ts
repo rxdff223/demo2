@@ -405,7 +405,10 @@ export const MAIN_HTML = `
           <i class="fas fa-hand-point-up mr-1"></i>意向处理
         </button>
         <button id="sessionTabBtn-negotiation" onclick="switchSessionTab('negotiation')" class="session-tab-btn px-3 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50">
-          <i class="fas fa-comments mr-1"></i>谈判
+          <i class="fas fa-folder-open mr-1"></i>方案管理
+        </button>
+        <button id="sessionTabBtn-memo" onclick="switchSessionTab('memo')" class="session-tab-btn px-3 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50">
+          <i class="fas fa-file-lines mr-1"></i>沟通备忘录
         </button>
         <button id="sessionTabBtn-timeline" onclick="switchSessionTab('timeline')" class="session-tab-btn px-3 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50">
           <i class="fas fa-stream mr-1"></i>时间线
@@ -689,7 +692,7 @@ export const MAIN_HTML = `
       </div>
     </div>
 
-    <!-- Tab: 谈判 -->
+    <!-- Tab: 方案管理 -->
     <div id="sessionTab-negotiation" class="hidden flex-1 overflow-y-auto p-5">
       <div class="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div class="xl:col-span-2 space-y-4">
@@ -704,21 +707,12 @@ export const MAIN_HTML = `
           </div>
 
           <div class="bg-white rounded-2xl border border-gray-100 p-5">
-            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-paper-plane mr-2 text-teal-600"></i>谈判记录</h3>
+            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-paper-plane mr-2 text-teal-600"></i>方案管理</h3>
             <div id="negProposalList" class="space-y-2 text-sm text-gray-600">暂无提案记录。</div>
           </div>
         </div>
 
         <div class="space-y-4">
-          <div class="bg-white rounded-2xl border border-gray-100 p-5">
-            <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-file-lines mr-2 text-indigo-600"></i>沟通纪要</h3>
-            <textarea id="negMemoInput" rows="4" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="记录线下会谈要点或争议点"></textarea>
-            <div class="grid grid-cols-2 gap-2 mt-2">
-              <button onclick="submitNegotiationMemo('pending')" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">上传纪要（待确认）</button>
-              <button onclick="submitNegotiationMemo('confirmed')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">上传并确认纪要</button>
-            </div>
-          </div>
-
           <div class="bg-white rounded-2xl border border-gray-100 p-5">
             <h3 class="text-base font-bold text-gray-900 mb-3"><i class="fas fa-user-plus mr-2 text-emerald-600"></i>邀请协作</h3>
             <div class="space-y-2">
@@ -741,6 +735,25 @@ export const MAIN_HTML = `
           </div>
         </div>
       </div>
+
+    <!-- Tab: 沟通备忘录 -->
+    <div id="sessionTab-memo" class="hidden flex-1 overflow-y-auto p-5">
+      <div class="max-w-3xl mx-auto space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-100 p-5">
+          <h3 class="text-base font-bold text-gray-900 mb-2"><i class="fas fa-file-lines mr-2 text-indigo-600"></i>沟通备忘录</h3>
+          <p class="text-sm text-gray-500 mb-4">记录线下会谈、电话沟通等要点，支持上传待确认或直接确认。</p>
+          <textarea id="negMemoInput" rows="4" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="记录线下会谈要点或争议点"></textarea>
+          <div class="grid grid-cols-2 gap-2 mt-2">
+            <button onclick="submitNegotiationMemo('pending')" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">上传纪要（待确认）</button>
+            <button onclick="submitNegotiationMemo('confirmed')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">上传并确认纪要</button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-100 p-5">
+          <h3 class="text-sm font-bold text-gray-800 mb-3"><i class="fas fa-list mr-1.5 text-indigo-500"></i>历史纪要</h3>
+          <div id="memoHistoryList" class="space-y-2 text-sm text-gray-600">暂无沟通纪要。</div>
+        </div>
+      </div>
+    </div>
 
       <!-- 方案详情弹窗 -->
       <div id="proposalDetailOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40" onclick="if(event.target===this)closeProposalDetail()">

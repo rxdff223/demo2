@@ -316,12 +316,12 @@
     function renderNegotiationProposals(state) {
       const list = document.getElementById('negProposalList');
       if (!list) return;
-      if (!state.proposals.length && !state.memos.length) {
+      if (!state.proposals.length) {
         list.textContent = '暂无提案记录。';
         return;
       }
 
-      const proposalHtml = state.proposals.map(function(p) {
+      list.innerHTML = state.proposals.map(function(p) {
         var isFinancer = p.perspective === 'financer';
         var roleName = isFinancer ? '融资方' : '投资方';
         var actions = [];
@@ -329,7 +329,6 @@
           var isSender = p.perspective === (currentPerspective || 'investor');
           actions.push('<button onclick="respondNegotiation(\'' + p.id + '\',\'accept\')" class="px-2 py-1 text-[11px] rounded bg-emerald-600 text-white">接受</button>');
           actions.push('<button onclick="respondNegotiation(\'' + p.id + '\',\'reject\')" class="px-2 py-1 text-[11px] rounded bg-rose-600 text-white">拒绝</button>');
-          // 反提案仅接收方可使用
           if (!isSender) {
             actions.push('<button onclick="respondNegotiation(\'' + p.id + '\',\'counter\')" class="px-2 py-1 text-[11px] rounded bg-cyan-600 text-white">反提案</button>');
           }
@@ -339,11 +338,9 @@
         } else if (p.status === 'accepted') {
           actions.push('<button onclick="confirmNegotiationTerms(\'' + p.id + '\')" class="px-2 py-1 text-[11px] rounded bg-teal-600 text-white">确认条款达成</button>');
         } else if (p.status === 'countered' && p.counterTerms) {
-          // 反提案发起方可撤回
           if (p.counterBy === (currentPerspective || 'investor')) {
             actions.push('<button onclick="withdrawCounterProposal(\'' + p.id + '\')" class="px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-700">撤回反提案</button>');
           }
-          // 原方案方可接受反提案
           if (p.perspective === (currentPerspective || 'investor')) {
             actions.push('<button onclick="acceptCounterProposal(\'' + p.id + '\')" class="px-2 py-1 text-[11px] rounded bg-emerald-600 text-white">接受反提案</button>');
           }
@@ -357,15 +354,33 @@
           (actions.length ? '<div class="flex flex-wrap gap-1 mt-2">' + actions.join('') + '</div>' : '') +
         '</div>';
       }).join('');
+    }
 
-      const memoHtml = state.memos.map(function(m) {
+    // ---- 沟通备忘录 Tab ----
+    function renderMemoTab() {
+      if (!currentDeal) return;
+      var state = ensureNegotiationState();
+      var list = document.getElementById('memoHistoryList');
+      if (!list) return;
+      var memos = state.memos || [];
+      if (memos.length === 0) {
+        list.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">暂无沟通纪要。</p>';
+        return;
+      }
+      list.innerHTML = memos.map(function(m) {
+        var time = m.at ? m.at.slice(0, 16).replace('T', ' ') : '';
+        var statusBadge = m.status === 'confirmed'
+          ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">已确认</span>'
+          : '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">待确认</span>';
         return '<div class="p-3 rounded-xl border border-indigo-100 bg-indigo-50">' +
-          '<p class="text-xs font-semibold text-indigo-700 mb-1">纪要 · ' + (m.status === 'confirmed' ? '已确认' : '待确认') + '</p>' +
-          '<p class="text-xs text-indigo-700">' + m.content + '</p>' +
+          '<div class="flex items-center justify-between mb-1">' +
+            '<span class="text-xs font-semibold text-indigo-700">纪要 · ' + m.id + '</span>' +
+            statusBadge +
+          '</div>' +
+          '<p class="text-xs text-indigo-700 leading-relaxed">' + m.content + '</p>' +
+          '<p class="text-[10px] text-indigo-400 mt-1.5">' + time + '</p>' +
         '</div>';
       }).join('');
-
-      list.innerHTML = proposalHtml + memoHtml;
     }
 
     function renderNegotiationTab() {
@@ -679,8 +694,8 @@
       });
       if (input) input.value = '';
       saveNegotiationState();
-      pushTimelineEvent('memo_uploaded', '上传谈判纪要（' + (status === 'confirmed' ? '已确认' : '待确认') + '）', getPublicTermsFromWorkbench());
-      renderNegotiationTab();
+      pushTimelineEvent('memo_uploaded', '上传沟通纪要（' + (status === 'confirmed' ? '已确认' : '待确认') + '）', getPublicTermsFromWorkbench());
+      renderMemoTab();
       showToast('success', '纪要已记录', status === 'confirmed' ? '纪要已确认' : '等待双方确认纪要');
     }
 
