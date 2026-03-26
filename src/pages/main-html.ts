@@ -771,6 +771,16 @@ export const MAIN_HTML = `
                 <p class="text-xs text-gray-400">暂无备忘录文件</p>
               </div>
             </div>
+            <div class="border border-gray-100 rounded-lg p-3 bg-gray-50/50">
+              <div class="flex items-center justify-between mb-2">
+                <label class="block text-xs font-semibold text-gray-600">行动项</label>
+                <button id="memoActionAddBtn" onclick="addMemoActionItem()" class="px-2 py-1 text-[11px] font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-white">新增行动项</button>
+              </div>
+              <p class="text-[11px] text-gray-400 mb-2">提交确认前至少维护 1 条行动项，用于后续执行跟进。</p>
+              <div id="memoActionList" class="space-y-2">
+                <p class="text-xs text-gray-400">暂无行动项</p>
+              </div>
+            </div>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-3">
             <button id="memoBtnSaveDraft" onclick="saveMemoDraft()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">保存草稿</button>
@@ -803,11 +813,18 @@ export const MAIN_HTML = `
                 <option value="rejected">已拒绝</option>
                 <option value="revised">已修订</option>
               </select>
-              <input id="memoSearchInput" type="text" class="px-2 py-1 border border-gray-200 rounded text-xs w-44" placeholder="搜索议题/摘要内容" oninput="renderMemoTab()">
+              <input id="memoSearchInput" type="text" class="px-2 py-1 border border-gray-200 rounded text-xs w-44" placeholder="搜索议题/负责人/摘要内容" oninput="renderMemoTab()">
             </div>
           </div>
           <p id="memoFilterMeta" class="text-[11px] text-gray-400 mb-2">默认按最近更新时间降序</p>
           <div id="memoHistoryList" class="space-y-2 text-sm text-gray-600">暂无沟通纪要。</div>
+          <div class="mt-4 pt-4 border-t border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-xs font-bold text-gray-700"><i class="fas fa-list-check mr-1.5 text-teal-500"></i>行动项看板</h4>
+              <span id="memoActionBoardStats" class="text-[11px] text-gray-400">完成 0/0</span>
+            </div>
+            <div id="memoActionBoardList" class="space-y-2 text-sm text-gray-600">请选择一条备忘录查看行动项。</div>
+          </div>
           <div class="mt-4 pt-4 border-t border-gray-100">
             <h4 class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-clock-rotate-left mr-1.5 text-indigo-500"></i>版本历史</h4>
             <div id="memoVersionHistory" class="space-y-2 text-sm text-gray-600">请选择一条备忘录查看版本历史。</div>

@@ -54,7 +54,7 @@
       negotiationByDeal[dealId] = {
         proposals: [],
         memos: [],
-        memoEditor: { selectedMemoId: '', evidenceDraft: [] },
+        memoEditor: { selectedMemoId: '', evidenceDraft: [], actionDraft: [] },
         invite: null
       };
       migrateMemoStateIfNeeded(negotiationByDeal[dealId]);
@@ -68,6 +68,7 @@
         state.memoEditor = {
           selectedMemoId: '',
           evidenceDraft: [],
+          actionDraft: [],
           diffVersionA: '',
           diffVersionB: ''
         };
@@ -77,6 +78,9 @@
       }
       if (!Array.isArray(state.memoEditor.evidenceDraft)) {
         state.memoEditor.evidenceDraft = [];
+      }
+      if (!Array.isArray(state.memoEditor.actionDraft)) {
+        state.memoEditor.actionDraft = [];
       }
       if (typeof state.memoEditor.diffVersionA !== 'string') {
         state.memoEditor.diffVersionA = '';
@@ -101,6 +105,7 @@
             return {
               ...v,
               evidenceAnchors: normalizeMemoEvidenceAnchors(v.evidenceAnchors),
+              actionItems: normalizeMemoActionItems(v.actionItems),
               confirmMeta: normalizeMemoConfirmMeta(v.confirmMeta, fallbackVersionStatus, v.author || '我方', v.updatedAt || v.createdAt || now)
             };
           });
@@ -140,6 +145,7 @@
             agreedContent: legacyContent,
             summaryBody: legacyContent,
             evidenceAnchors: [],
+            actionItems: [],
             confirmMeta: legacyConfirmMeta,
             rejectMeta: null
           }]
@@ -168,6 +174,20 @@
           recognizedText: recognizedText,
           recognitionStatus: recognitionStatus,
           localId: src.localId || ('L_' + Date.now() + '_' + Math.floor(Math.random() * 1000))
+        };
+      });
+    }
+
+    function normalizeMemoActionItems(items) {
+      if (!Array.isArray(items)) return [];
+      return items.map(function(item) {
+        var src = item || {};
+        var status = src.status === 'doing' || src.status === 'done' ? src.status : 'todo';
+        return {
+          title: src.title || '',
+          owner: src.owner || '',
+          dueDate: src.dueDate || '',
+          status: status
         };
       });
     }
@@ -266,11 +286,14 @@
     function memoContainsKeyword(memo, keyword) {
       if (!keyword) return true;
       var currentVersion = getMemoCurrentVersion(memo);
+      var actions = normalizeMemoActionItems(currentVersion && currentVersion.actionItems);
+      var actionOwnerText = actions.map(function(item) { return item.owner || ''; }).join(' ');
       var searchText = [
         memo.id,
         currentVersion && currentVersion.topic,
         currentVersion && currentVersion.summaryBody,
-        currentVersion && currentVersion.agreedContent
+        currentVersion && currentVersion.agreedContent,
+        actionOwnerText
       ].filter(Boolean).join(' ').toLowerCase();
       return searchText.includes(keyword);
     }
@@ -312,7 +335,8 @@
         topic: (document.getElementById('memoTopic')?.value || '').trim(),
         agreedContent: (document.getElementById('memoAgreedContent')?.value || '').trim(),
         summaryBody: (document.getElementById('memoSummaryBody')?.value || '').trim(),
-        evidenceAnchors: normalizeMemoEvidenceAnchors(state?.memoEditor?.evidenceDraft || [])
+        evidenceAnchors: normalizeMemoEvidenceAnchors(state?.memoEditor?.evidenceDraft || []),
+        actionItems: normalizeMemoActionItems(state?.memoEditor?.actionDraft || [])
       };
     }
 
@@ -328,8 +352,10 @@
       if (state) {
         ensureMemoEditorState(state);
         state.memoEditor.evidenceDraft = normalizeMemoEvidenceAnchors(source.evidenceAnchors);
+        state.memoEditor.actionDraft = normalizeMemoActionItems(source.actionItems);
       }
       renderMemoEvidenceEditor();
+      renderMemoActionEditor();
     }
 
     function renderMemoEvidenceEditor() {
@@ -499,6 +525,112 @@
       updateMemoEvidenceField(index, 'note', value);
     }
 
+    function renderMemoActionEditor() {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      var list = document.getElementById('memoActionList');
+      if (!list) return;
+      var items = normalizeMemoActionItems(state.memoEditor.actionDraft);
+      state.memoEditor.actionDraft = items;
+      if (items.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-400">暂无行动项</p>';
+        return;
+      }
+      list.innerHTML = items.map(function(item, idx) {
+        return '<div class="memo-action-row p-2 rounded-lg border border-gray-200 bg-white">' +
+          '<div class="grid grid-cols-1 md:grid-cols-3 gap-2">' +
+            '<div class="md:col-span-2">' +
+              '<label class="block text-[10px] text-gray-500 mb-0.5">事项标题</label>' +
+              '<input class="memo-action-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" value="' + escapeMemoText(item.title) + '" placeholder="例如：补充门店流水佐证" oninput="updateMemoActionField(' + idx + ', &quot;title&quot;, this.value)">' +
+            '</div>' +
+            '<div>' +
+              '<label class="block text-[10px] text-gray-500 mb-0.5">负责人</label>' +
+              '<input class="memo-action-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" value="' + escapeMemoText(item.owner) + '" placeholder="投资方/融资方" oninput="updateMemoActionField(' + idx + ', &quot;owner&quot;, this.value)">' +
+            '</div>' +
+          '</div>' +
+          '<div class="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">' +
+            '<div>' +
+              '<label class="block text-[10px] text-gray-500 mb-0.5">截止日期</label>' +
+              '<input type="date" class="memo-action-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" value="' + escapeMemoText(item.dueDate) + '" oninput="updateMemoActionField(' + idx + ', &quot;dueDate&quot;, this.value)">' +
+            '</div>' +
+            '<div>' +
+              '<label class="block text-[10px] text-gray-500 mb-0.5">状态</label>' +
+              '<select class="memo-action-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs bg-white" onchange="updateMemoActionField(' + idx + ', &quot;status&quot;, this.value)">' +
+                '<option value="todo" ' + (item.status === 'todo' ? 'selected' : '') + '>待办</option>' +
+                '<option value="doing" ' + (item.status === 'doing' ? 'selected' : '') + '>进行中</option>' +
+                '<option value="done" ' + (item.status === 'done' ? 'selected' : '') + '>已完成</option>' +
+              '</select>' +
+            '</div>' +
+            '<div class="flex items-end justify-end">' +
+              '<button class="memo-action-remove-btn px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="removeMemoActionItem(' + idx + ')">删除</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function addMemoActionItem() {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      state.memoEditor.actionDraft.push({
+        title: '',
+        owner: '',
+        dueDate: '',
+        status: 'todo'
+      });
+      renderMemoActionEditor();
+    }
+
+    function removeMemoActionItem(index) {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      if (index < 0 || index >= state.memoEditor.actionDraft.length) return;
+      state.memoEditor.actionDraft.splice(index, 1);
+      renderMemoActionEditor();
+    }
+
+    function updateMemoActionField(index, field, value) {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      if (!state.memoEditor.actionDraft[index]) return;
+      state.memoEditor.actionDraft[index][field] = value || '';
+    }
+
+    function renderMemoActionBoard(memoVersion) {
+      var list = document.getElementById('memoActionBoardList');
+      var stats = document.getElementById('memoActionBoardStats');
+      if (!list || !stats) return;
+      if (!memoVersion) {
+        stats.textContent = '完成 0/0';
+        list.innerHTML = '请选择一条备忘录查看行动项。';
+        return;
+      }
+      var items = normalizeMemoActionItems(memoVersion.actionItems);
+      var doneCount = items.filter(function(item) { return item.status === 'done'; }).length;
+      stats.textContent = '完成 ' + doneCount + '/' + items.length;
+      if (!items.length) {
+        list.innerHTML = '当前版本暂无行动项。';
+        return;
+      }
+      list.innerHTML = items.map(function(item, idx) {
+        var statusText = item.status === 'done' ? '已完成' : item.status === 'doing' ? '进行中' : '待办';
+        var statusCls = item.status === 'done' ? 'bg-emerald-100 text-emerald-700'
+          : item.status === 'doing' ? 'bg-amber-100 text-amber-700'
+          : 'bg-gray-100 text-gray-600';
+        return '<div class="p-2.5 rounded-lg border border-gray-100 bg-gray-50">' +
+          '<div class="flex items-center justify-between">' +
+            '<span class="text-xs font-semibold text-gray-700">#' + (idx + 1) + ' ' + escapeMemoText(item.title || '未命名事项') + '</span>' +
+            '<span class="text-[10px] px-1.5 py-0.5 rounded ' + statusCls + '">' + statusText + '</span>' +
+          '</div>' +
+          '<p class="text-[11px] text-gray-500 mt-1">负责人：' + escapeMemoText(item.owner || '--') + ' · 截止：' + escapeMemoText(item.dueDate || '--') + '</p>' +
+        '</div>';
+      }).join('');
+    }
+
     function buildMemoSummaryFromEvidence(items) {
       var rows = (items || []).filter(function(item) {
         return item && item.recognitionStatus === 'success' && String(item.recognizedText || '').trim();
@@ -538,6 +670,15 @@
         summaryBody.value = existing ? (existing + '\n\n' + summary) : summary;
       }
       showToast('success', 'AI识别完成', '内容已写入摘要正文');
+    }
+
+    function formatMemoActionItemsForDiff(items) {
+      var list = normalizeMemoActionItems(items);
+      if (!list.length) return '无';
+      return list.map(function(item, idx) {
+        var statusText = item.status === 'done' ? '已完成' : item.status === 'doing' ? '进行中' : '待办';
+        return (idx + 1) + '. ' + (item.title || '未命名事项') + ' / ' + (item.owner || '--') + ' / ' + (item.dueDate || '--') + ' / ' + statusText;
+      }).join('\n');
     }
 
     function setMemoDiffDefaults(state, memo) {
@@ -588,7 +729,8 @@
 
       var fields = [
         { key: 'agreedContent', label: '达成内容', formatter: function(v) { return v || '无'; } },
-        { key: 'summaryBody', label: '摘要正文', formatter: function(v) { return v || '无'; } }
+        { key: 'summaryBody', label: '摘要正文', formatter: function(v) { return v || '无'; } },
+        { key: 'actionItems', label: '行动项', formatter: function(v) { return formatMemoActionItemsForDiff(v); } }
       ];
 
       box.innerHTML = fields.map(function(field) {
@@ -742,6 +884,11 @@
       var fileInput = document.getElementById('memoEvidenceFileInput');
       if (fileInput) fileInput.disabled = !!disabled;
       document.querySelectorAll('.memo-evidence-input, .memo-evidence-remove-btn').forEach(function(el) {
+        el.disabled = !!disabled;
+      });
+      var actionAddBtn = document.getElementById('memoActionAddBtn');
+      if (actionAddBtn) actionAddBtn.disabled = !!disabled;
+      document.querySelectorAll('.memo-action-input, .memo-action-remove-btn').forEach(function(el) {
         el.disabled = !!disabled;
       });
     }
@@ -1101,6 +1248,7 @@
         setMemoFormData({});
         updateMemoEditorHint('当前为新建模式。必填：议题、达成内容。');
         renderMemoActionBar(state, null);
+        renderMemoActionBoard(null);
         renderMemoVersionHistory(state, null);
         renderMemoFilterMeta({ allCount: 0, filteredCount: 0, statusFilter: 'all', keyword: '' });
         saveNegotiationState();
@@ -1127,6 +1275,9 @@
         var rejectReason = currentVersion && currentVersion.rejectMeta && currentVersion.rejectMeta.reason ? currentVersion.rejectMeta.reason : '';
         var evidences = normalizeMemoEvidenceAnchors(currentVersion && currentVersion.evidenceAnchors);
         var evidenceCount = evidences.length;
+        var actionItems = normalizeMemoActionItems(currentVersion && currentVersion.actionItems);
+        var actionCount = actionItems.length;
+        var actionDoneCount = actionItems.filter(function(item) { return item.status === 'done'; }).length;
         var evidenceDetails = evidenceCount > 0
           ? ('<details class="mt-1.5 text-[11px] text-gray-500" onclick="event.stopPropagation()"><summary class="cursor-pointer select-none">查看证据详情（' + evidenceCount + '）</summary><div class="mt-1 space-y-1">' + evidences.map(function(ev, i) {
               var when = (ev.sourceAt || ev.uploadedAt) ? String(ev.sourceAt || ev.uploadedAt).replace('T', ' ').slice(0, 16) : '--';
@@ -1134,6 +1285,12 @@
               return '<div class="p-1.5 rounded bg-gray-50 border border-gray-100"><span class="font-medium">#' + (i + 1) + '</span> ' + escapeMemoText(ev.fileName || '未命名文件') + ' · ' + escapeMemoText(formatMemoFileSize(ev.fileSize)) + ' · ' + escapeMemoText(ev.mimeType || '--') + ' · 来源：' + escapeMemoText(sourceRole) + ' · ' + escapeMemoText(when) + (ev.note ? ('<br><span class="text-gray-400">' + escapeMemoText(ev.note) + '</span>') : '') + '</div>';
             }).join('') + '</div></details>')
           : '<p class="text-[11px] text-gray-400 mt-1.5">备忘录文件：0</p>';
+        var actionDetails = actionCount > 0
+          ? ('<details class="mt-1.5 text-[11px] text-gray-500" onclick="event.stopPropagation()"><summary class="cursor-pointer select-none">查看行动项（' + actionDoneCount + '/' + actionCount + ' 完成）</summary><div class="mt-1 space-y-1">' + actionItems.map(function(item, idx) {
+              var statusText = item.status === 'done' ? '已完成' : item.status === 'doing' ? '进行中' : '待办';
+              return '<div class="p-1.5 rounded bg-gray-50 border border-gray-100"><span class="font-medium">#' + (idx + 1) + '</span> ' + escapeMemoText(item.title || '未命名事项') + ' · 负责人 ' + escapeMemoText(item.owner || '--') + ' · 截止 ' + escapeMemoText(item.dueDate || '--') + ' · ' + statusText + '</div>';
+            }).join('') + '</div></details>')
+          : '<p class="text-[11px] text-gray-400 mt-1.5">行动项：0</p>';
         return '<div onclick="selectMemoForEdit(\'' + m.id + '\')" class="w-full text-left p-3 rounded-xl border transition-colors cursor-pointer ' + (selected ? 'border-indigo-300 bg-indigo-50' : 'border-indigo-100 bg-white hover:bg-indigo-50/40') + '">' +
           '<div class="flex items-center justify-between mb-1.5">' +
             '<div class="text-xs font-semibold text-indigo-700">纪要 · ' + m.id + ' · V' + m.currentVersion + '</div>' +
@@ -1143,9 +1300,10 @@
           '<p class="text-xs text-gray-600 leading-relaxed">' + (shortSummary || '无摘要') + '</p>' +
           (rejectReason ? '<p class="text-[11px] text-rose-600 mt-1">拒绝原因：' + rejectReason + '</p>' : '') +
           evidenceDetails +
+          actionDetails +
           '<div class="text-[10px] text-gray-400 mt-1.5 flex items-center justify-between">' +
             '<span>' + time + '</span>' +
-            '<span>备忘录文件：' + evidenceCount + '</span>' +
+            '<span>备忘录文件：' + evidenceCount + ' · 行动项：' + actionDoneCount + '/' + actionCount + '</span>' +
           '</div>' +
         '</div>';
         }).join('');
@@ -1156,6 +1314,7 @@
         setMemoFormData({});
         updateMemoEditorHint('当前为新建模式。必填：议题、达成内容。');
         renderMemoActionBar(state, null);
+        renderMemoActionBoard(null);
         renderMemoVersionHistory(state, null);
         return;
       }
@@ -1169,6 +1328,7 @@
       if (selectedMemo.status === 'confirmed') selectedStatusLabel = '已确认（2/2）';
       updateMemoEditorHint('当前编辑：' + selectedMemo.id + ' · V' + selectedMemo.currentVersion + ' · ' + selectedStatusLabel + '。');
       renderMemoActionBar(state, selectedMemo);
+      renderMemoActionBoard(selectedVersion);
       renderMemoVersionHistory(state, selectedMemo);
     }
 
@@ -1181,6 +1341,11 @@
         var evidenceCount = normalizeMemoEvidenceAnchors(data.evidenceAnchors).length;
         if (evidenceCount < 1) {
           showToast('warning', '缺少备忘录文件', '提交确认前至少上传 1 个备忘录文件');
+          return false;
+        }
+        var actionCount = normalizeMemoActionItems(data.actionItems).length;
+        if (actionCount < 1) {
+          showToast('warning', '缺少行动项', '提交确认前至少维护 1 条行动项');
           return false;
         }
       }
@@ -1230,6 +1395,7 @@
         agreedContent: payload.agreedContent,
         summaryBody: payload.summaryBody,
         evidenceAnchors: normalizeMemoEvidenceAnchors(payload.evidenceAnchors),
+        actionItems: normalizeMemoActionItems(payload.actionItems),
         confirmMeta: normalizeMemoConfirmMeta(null, targetStatus),
         rejectMeta: null
       };
@@ -1286,6 +1452,7 @@
         agreedContent: baseVersion.agreedContent || '',
         summaryBody: baseVersion.summaryBody || '',
         evidenceAnchors: normalizeMemoEvidenceAnchors(baseVersion.evidenceAnchors),
+        actionItems: normalizeMemoActionItems(baseVersion.actionItems),
         revisedFromVersion: baseVersion.version,
         confirmMeta: normalizeMemoConfirmMeta(null, 'draft'),
         rejectMeta: null
