@@ -68,6 +68,7 @@
         state.memoEditor = {
           selectedMemoId: '',
           evidenceDraft: [],
+          lastPrimaryAction: '',
           diffVersionA: '',
           diffVersionB: ''
         };
@@ -77,6 +78,9 @@
       }
       if (!Array.isArray(state.memoEditor.evidenceDraft)) {
         state.memoEditor.evidenceDraft = [];
+      }
+      if (typeof state.memoEditor.lastPrimaryAction !== 'string') {
+        state.memoEditor.lastPrimaryAction = '';
       }
       if (typeof state.memoEditor.diffVersionA !== 'string') {
         state.memoEditor.diffVersionA = '';
@@ -688,6 +692,7 @@
       if (!state) return;
       ensureMemoEditorState(state);
       state.memoEditor.selectedMemoId = '';
+      setMemoLastPrimaryAction('new');
       setMemoFormData({});
       var rejectReason = document.getElementById('memoRejectReason');
       if (rejectReason) rejectReason.value = '';
@@ -746,6 +751,22 @@
       });
     }
 
+    function applyMemoPrimaryBtnStyle(btn, baseClass, isActive, disabled) {
+      if (!btn) return;
+      btn.className = baseClass;
+      btn.disabled = !!disabled;
+      btn.classList.toggle('ring-2', !!isActive);
+      btn.classList.toggle('ring-offset-1', !!isActive);
+      btn.classList.toggle('ring-indigo-300', !!isActive);
+    }
+
+    function setMemoLastPrimaryAction(action) {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      state.memoEditor.lastPrimaryAction = String(action || '');
+    }
+
     function renderMemoActionBar(state, selectedMemo) {
       var saveBtn = document.getElementById('memoBtnSaveDraft');
       var submitBtn = document.getElementById('memoBtnSubmitConfirm');
@@ -762,6 +783,7 @@
       var confirmCount = selectedVersion ? getMemoConfirmCount(selectedVersion.confirmMeta) : 0;
       var editable = canInvestorEditMemo(selectedMemo);
       if (!selectedMemo) editable = true;
+      var lastAction = (state && state.memoEditor && state.memoEditor.lastPrimaryAction) || '';
 
       setMemoFormDisabled(!editable);
 
@@ -771,6 +793,31 @@
 
       var showRevision = !!selectedMemo && !canInvestorEditMemo(selectedMemo);
       if (revisionBtn) revisionBtn.classList.toggle('hidden', !showRevision);
+
+      applyMemoPrimaryBtnStyle(
+        saveBtn,
+        'px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed',
+        lastAction === 'draft',
+        !editable
+      );
+      applyMemoPrimaryBtnStyle(
+        submitBtn,
+        'px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed',
+        lastAction === 'submit',
+        !editable
+      );
+      applyMemoPrimaryBtnStyle(
+        newBtn,
+        'px-3 py-2 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed',
+        lastAction === 'new',
+        false
+      );
+      applyMemoPrimaryBtnStyle(
+        revisionBtn,
+        'w-full px-3 py-2 text-xs font-semibold rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 disabled:opacity-50 disabled:cursor-not-allowed',
+        lastAction === 'revision',
+        !showRevision
+      );
 
       if (financerActions) financerActions.classList.toggle('hidden', !selectedMemo);
       if (confirmBtn) {
@@ -1247,6 +1294,7 @@
     function saveMemoDraft() {
       var memo = upsertMemoFromForm('draft');
       if (!memo) return;
+      setMemoLastPrimaryAction('draft');
       pushTimelineEvent('memo_draft_saved', '保存沟通备忘录草稿（' + memo.id + '）', getPublicTermsFromWorkbench());
       renderMemoTab();
       showToast('success', '草稿已保存', memo.id + ' · V' + memo.currentVersion);
@@ -1255,6 +1303,7 @@
     function submitMemoForConfirmation() {
       var memo = upsertMemoFromForm('pending_confirmation');
       if (!memo) return;
+      setMemoLastPrimaryAction('submit');
       pushTimelineEvent('memo_submitted', '提交沟通备忘录待确认（' + memo.id + '）', getPublicTermsFromWorkbench());
       renderMemoTab();
       showToast('success', '已提交确认', memo.id + ' 已进入待确认状态');
@@ -1298,6 +1347,7 @@
       state.memoEditor.selectedMemoId = memo.id;
       state.memoEditor.diffVersionA = String(nextVersionNo);
       state.memoEditor.diffVersionB = String(baseVersion.version);
+      state.memoEditor.lastPrimaryAction = 'revision';
       saveNegotiationState();
       pushTimelineEvent('memo_revised', '基于 ' + memo.id + ' V' + baseVersion.version + ' 生成修订稿 V' + nextVersionNo, getPublicTermsFromWorkbench());
       renderMemoTab();
@@ -1364,6 +1414,9 @@
       } else {
         showToast('info', '已记录本方确认', memo.id + ' 当前确认进度 ' + confirmCount + '/2');
       }
+      var timelineFilter = document.getElementById('timelineFilterType');
+      if (timelineFilter) timelineFilter.value = 'memo';
+      if (typeof switchSessionTab === 'function') switchSessionTab('timeline');
     }
 
     function rejectSelectedMemo() {
