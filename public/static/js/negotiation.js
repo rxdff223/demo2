@@ -843,8 +843,6 @@
     }
 
     function renderMemoActionBar(state, selectedMemo) {
-      var isFinancer = currentPerspective === 'financer';
-      var isInvestor = !isFinancer;
       var saveBtn = document.getElementById('memoBtnSaveDraft');
       var submitBtn = document.getElementById('memoBtnSubmitConfirm');
       var newBtn = document.getElementById('memoBtnNew');
@@ -855,28 +853,25 @@
       var rejectReason = document.getElementById('memoRejectReason');
 
       var selectedPending = !!selectedMemo && selectedMemo.status === 'pending_confirmation';
-      var editable = isInvestor && canInvestorEditMemo(selectedMemo);
-      if (!selectedMemo && isInvestor) editable = true;
+      var editable = canInvestorEditMemo(selectedMemo);
+      if (!selectedMemo) editable = true;
 
       setMemoFormDisabled(!editable);
 
-      if (saveBtn) saveBtn.classList.toggle('hidden', !isInvestor);
-      if (submitBtn) submitBtn.classList.toggle('hidden', !isInvestor);
-      if (newBtn) newBtn.classList.toggle('hidden', !isInvestor);
+      if (saveBtn) saveBtn.classList.remove('hidden');
+      if (submitBtn) submitBtn.classList.remove('hidden');
+      if (newBtn) newBtn.classList.remove('hidden');
 
-      var showRevision = isInvestor && !!selectedMemo && !canInvestorEditMemo(selectedMemo);
+      var showRevision = !!selectedMemo && !canInvestorEditMemo(selectedMemo);
       if (revisionBtn) revisionBtn.classList.toggle('hidden', !showRevision);
 
-      if (financerActions) financerActions.classList.toggle('hidden', !(isFinancer && !!selectedMemo));
-      if (confirmBtn) confirmBtn.disabled = !(isFinancer && selectedPending);
-      if (rejectBtn) rejectBtn.disabled = !(isFinancer && selectedPending);
-      if (rejectReason) rejectReason.disabled = !(isFinancer && selectedPending);
+      if (financerActions) financerActions.classList.toggle('hidden', !selectedMemo);
+      if (confirmBtn) confirmBtn.disabled = !selectedPending;
+      if (rejectBtn) rejectBtn.disabled = !selectedPending;
+      if (rejectReason) rejectReason.disabled = !selectedPending;
 
-      if (isInvestor && selectedMemo && !editable) {
+      if (selectedMemo && !editable) {
         updateMemoEditorHint('当前版本为「' + getMemoStatusMeta(selectedMemo.status).label + '」，不可原地编辑；请先生成修订稿。');
-      }
-      if (isFinancer && !selectedMemo) {
-        updateMemoEditorHint('请选择一条备忘录进行确认或拒绝。');
       }
     }
 
@@ -1283,10 +1278,6 @@
       if (!currentDeal) return null;
       var state = ensureNegotiationState();
       if (!state) return null;
-      if (currentPerspective === 'financer') {
-        showToast('warning', '当前为融资方视角', '融资方仅可确认或拒绝备忘录');
-        return null;
-      }
       ensureMemoEditorState(state);
 
       var payload = getMemoFormData();
@@ -1359,10 +1350,6 @@
       if (!currentDeal) return;
       var state = ensureNegotiationState();
       if (!state) return;
-      if (currentPerspective === 'financer') {
-        showToast('warning', '当前为融资方视角', '融资方不可创建修订稿');
-        return;
-      }
       var memo = getSelectedMemo(state);
       if (!memo) {
         showToast('warning', '未选择备忘录', '请先选择一条备忘录');
@@ -1411,10 +1398,6 @@
       if (!currentDeal) return;
       var state = ensureNegotiationState();
       if (!state) return;
-      if (currentPerspective === 'financer') {
-        showToast('warning', '当前为融资方视角', '融资方不可创建修订稿');
-        return;
-      }
       var memo = getSelectedMemo(state);
       if (!memo) {
         showToast('warning', '未选择备忘录', '请先选择一条备忘录');
@@ -1430,10 +1413,6 @@
 
     function confirmSelectedMemo() {
       if (!currentDeal) return;
-      if (currentPerspective !== 'financer') {
-        showToast('warning', '当前为投资方视角', '请切换到融资方视角后确认');
-        return;
-      }
       var state = ensureNegotiationState();
       if (!state) return;
       var memo = getSelectedMemo(state);
@@ -1465,10 +1444,6 @@
 
     function rejectSelectedMemo() {
       if (!currentDeal) return;
-      if (currentPerspective !== 'financer') {
-        showToast('warning', '当前为投资方视角', '请切换到融资方视角后拒绝');
-        return;
-      }
       var state = ensureNegotiationState();
       if (!state) return;
       var memo = getSelectedMemo(state);
