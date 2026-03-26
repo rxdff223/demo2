@@ -772,10 +772,12 @@ export const MAIN_HTML = `
               </div>
             </div>
           </div>
-          <div class="grid grid-cols-3 gap-2 mt-3">
+          <div class="grid grid-cols-2 gap-2 mt-3">
             <button id="memoBtnSaveDraft" onclick="saveMemoDraft()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed">保存草稿</button>
             <button id="memoBtnSubmitConfirm" onclick="submitMemoForConfirmation()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">提交确认</button>
-            <button id="memoBtnNew" onclick="clearMemoForm()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed">新建</button>
+          </div>
+          <div class="mt-2">
+            <button id="memoBtnNew" onclick="clearMemoForm()" class="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed">开始新记录</button>
           </div>
           <div class="mt-2">
             <button id="memoBtnCreateRevision" onclick="createMemoRevision()" class="hidden w-full px-3 py-2 text-xs font-semibold rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 disabled:opacity-50 disabled:cursor-not-allowed">基于当前版本生成修订稿</button>
