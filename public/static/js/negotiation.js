@@ -65,10 +65,13 @@
     function ensureMemoEditorState(state) {
       if (!state) return;
       if (!state.memoEditor || typeof state.memoEditor !== 'object') {
-        state.memoEditor = { selectedMemoId: '' };
+        state.memoEditor = { selectedMemoId: '', evidenceDraft: [] };
       }
       if (typeof state.memoEditor.selectedMemoId !== 'string') {
         state.memoEditor.selectedMemoId = '';
+      }
+      if (!Array.isArray(state.memoEditor.evidenceDraft)) {
+        state.memoEditor.evidenceDraft = [];
       }
     }
 
@@ -81,6 +84,13 @@
       var now = new Date().toISOString();
       state.memos = state.memos.map(function(memo, idx) {
         if (memo && Array.isArray(memo.versions)) {
+          memo.versions = memo.versions.map(function(version) {
+            var v = version || {};
+            return {
+              ...v,
+              evidenceAnchors: normalizeMemoEvidenceAnchors(v.evidenceAnchors)
+            };
+          });
           if (typeof memo.currentVersion !== 'number' || memo.currentVersion < 1) {
             memo.currentVersion = memo.versions.length || 1;
             migrated = true;
@@ -116,11 +126,26 @@
             boundary: '',
             effectiveDate: '',
             relatedProposalId: '',
-            summaryBody: legacyContent
+            summaryBody: legacyContent,
+            evidenceAnchors: []
           }]
         };
       });
       if (migrated) saveNegotiationState();
+    }
+
+    function normalizeMemoEvidenceAnchors(items) {
+      if (!Array.isArray(items)) return [];
+      return items.map(function(item) {
+        var src = item || {};
+        return {
+          type: src.type || 'screenshot',
+          sourceRole: src.sourceRole || '',
+          sourceAt: src.sourceAt || '',
+          note: src.note || '',
+          attachmentName: src.attachmentName || ''
+        };
+      });
     }
 
     function getMemoCurrentVersion(memo) {
@@ -156,13 +181,16 @@
     }
 
     function getMemoFormData() {
+      syncMemoEvidenceDraftFromDom();
+      var state = ensureNegotiationState();
       return {
         topic: (document.getElementById('memoTopic')?.value || '').trim(),
         agreedContent: (document.getElementById('memoAgreedContent')?.value || '').trim(),
         boundary: (document.getElementById('memoBoundary')?.value || '').trim(),
         effectiveDate: (document.getElementById('memoEffectiveDate')?.value || '').trim(),
         relatedProposalId: (document.getElementById('memoRelatedProposalId')?.value || '').trim(),
-        summaryBody: (document.getElementById('memoSummaryBody')?.value || '').trim()
+        summaryBody: (document.getElementById('memoSummaryBody')?.value || '').trim(),
+        evidenceAnchors: normalizeMemoEvidenceAnchors(state?.memoEditor?.evidenceDraft || [])
       };
     }
 
@@ -180,6 +208,114 @@
       if (effectiveDate) effectiveDate.value = source.effectiveDate || '';
       if (relatedProposalId) relatedProposalId.value = source.relatedProposalId || '';
       if (summaryBody) summaryBody.value = source.summaryBody || '';
+      var state = ensureNegotiationState();
+      if (state) {
+        ensureMemoEditorState(state);
+        state.memoEditor.evidenceDraft = normalizeMemoEvidenceAnchors(source.evidenceAnchors);
+      }
+      renderMemoEvidenceEditor();
+    }
+
+    function syncMemoEvidenceDraftFromDom() {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      var rows = document.querySelectorAll('.memo-evidence-row');
+      if (!rows.length) return;
+      var next = [];
+      rows.forEach(function(row) {
+        var type = row.querySelector('[data-field="type"]');
+        var sourceRole = row.querySelector('[data-field="sourceRole"]');
+        var sourceAt = row.querySelector('[data-field="sourceAt"]');
+        var note = row.querySelector('[data-field="note"]');
+        var attachmentName = row.querySelector('[data-field="attachmentName"]');
+        next.push({
+          type: (type && type.value) || 'screenshot',
+          sourceRole: (sourceRole && sourceRole.value) || '',
+          sourceAt: (sourceAt && sourceAt.value) || '',
+          note: (note && note.value) || '',
+          attachmentName: (attachmentName && attachmentName.value) || ''
+        });
+      });
+      state.memoEditor.evidenceDraft = normalizeMemoEvidenceAnchors(next);
+    }
+
+    function renderMemoEvidenceEditor() {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      var list = document.getElementById('memoEvidenceList');
+      if (!list) return;
+      var items = normalizeMemoEvidenceAnchors(state.memoEditor.evidenceDraft);
+      state.memoEditor.evidenceDraft = items;
+      if (items.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-400">暂无证据锚点</p>';
+        return;
+      }
+      list.innerHTML = items.map(function(item, idx) {
+        return '<div class="memo-evidence-row p-2 rounded-lg border border-gray-200 bg-white" data-index="' + idx + '">' +
+          '<div class="grid grid-cols-1 md:grid-cols-2 gap-2">' +
+            '<div>' +
+              '<label class="block text-[10px] text-gray-500 mb-0.5">类型</label>' +
+              '<select class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs bg-white" data-field="type" onchange="updateMemoEvidenceField(' + idx + ', &quot;type&quot;, this.value)">' +
+                '<option value="screenshot" ' + (item.type === 'screenshot' ? 'selected' : '') + '>截图</option>' +
+                '<option value="transcript" ' + (item.type === 'transcript' ? 'selected' : '') + '>语音转写</option>' +
+                '<option value="file" ' + (item.type === 'file' ? 'selected' : '') + '>文件</option>' +
+              '</select>' +
+            '</div>' +
+            '<div>' +
+              '<label class="block text-[10px] text-gray-500 mb-0.5">来源角色</label>' +
+              '<input class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" data-field="sourceRole" value="' + item.sourceRole + '" placeholder="投资方/融资方" oninput="updateMemoEvidenceField(' + idx + ', &quot;sourceRole&quot;, this.value)">' +
+            '</div>' +
+            '<div>' +
+              '<label class="block text-[10px] text-gray-500 mb-0.5">时间</label>' +
+              '<input type="datetime-local" class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" data-field="sourceAt" value="' + item.sourceAt + '" oninput="updateMemoEvidenceField(' + idx + ', &quot;sourceAt&quot;, this.value)">' +
+            '</div>' +
+            '<div>' +
+              '<label class="block text-[10px] text-gray-500 mb-0.5">附件名称</label>' +
+              '<input class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" data-field="attachmentName" value="' + item.attachmentName + '" placeholder="wechat-shot-0326.png" oninput="updateMemoEvidenceField(' + idx + ', &quot;attachmentName&quot;, this.value)">' +
+            '</div>' +
+          '</div>' +
+          '<div class="mt-2">' +
+            '<label class="block text-[10px] text-gray-500 mb-0.5">备注</label>' +
+            '<textarea class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" rows="2" data-field="note" placeholder="该证据说明..." oninput="updateMemoEvidenceField(' + idx + ', &quot;note&quot;, this.value)">' + item.note + '</textarea>' +
+          '</div>' +
+          '<div class="mt-1.5 text-right">' +
+            '<button class="memo-evidence-remove-btn px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="removeMemoEvidenceItem(' + idx + ')">删除</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function addMemoEvidenceItem() {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      state.memoEditor.evidenceDraft.push({
+        type: 'screenshot',
+        sourceRole: '',
+        sourceAt: '',
+        note: '',
+        attachmentName: ''
+      });
+      renderMemoEvidenceEditor();
+    }
+
+    function removeMemoEvidenceItem(index) {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      if (index < 0 || index >= state.memoEditor.evidenceDraft.length) return;
+      state.memoEditor.evidenceDraft.splice(index, 1);
+      renderMemoEvidenceEditor();
+    }
+
+    function updateMemoEvidenceField(index, field, value) {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      if (!state.memoEditor.evidenceDraft[index]) return;
+      state.memoEditor.evidenceDraft[index][field] = value;
     }
 
     function updateMemoEditorHint(text) {
@@ -241,6 +377,11 @@
       ].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.disabled = !!disabled;
+      });
+      var addBtn = document.getElementById('memoEvidenceAddBtn');
+      if (addBtn) addBtn.disabled = !!disabled;
+      document.querySelectorAll('.memo-evidence-input, .memo-evidence-remove-btn').forEach(function(el) {
+        el.disabled = !!disabled;
       });
     }
 
@@ -607,18 +748,28 @@
         var selected = state.memoEditor.selectedMemoId === m.id;
         var summary = (currentVersion && currentVersion.summaryBody) || (currentVersion && currentVersion.agreedContent) || '';
         var shortSummary = summary.length > 90 ? (summary.slice(0, 90) + '...') : summary;
-        return '<button onclick="selectMemoForEdit(\'' + m.id + '\')" class="w-full text-left p-3 rounded-xl border transition-colors ' + (selected ? 'border-indigo-300 bg-indigo-50' : 'border-indigo-100 bg-white hover:bg-indigo-50/40') + '">' +
+        var rejectReason = currentVersion && currentVersion.rejectMeta && currentVersion.rejectMeta.reason ? currentVersion.rejectMeta.reason : '';
+        var evidences = normalizeMemoEvidenceAnchors(currentVersion && currentVersion.evidenceAnchors);
+        var evidenceCount = evidences.length;
+        var evidenceDetails = evidenceCount > 0
+          ? ('<details class="mt-1.5 text-[11px] text-gray-500" onclick="event.stopPropagation()"><summary class="cursor-pointer select-none">查看证据详情（' + evidenceCount + '）</summary><div class="mt-1 space-y-1">' + evidences.map(function(ev, i) {
+              return '<div class="p-1.5 rounded bg-gray-50 border border-gray-100"><span class="font-medium">#' + (i + 1) + '</span> [' + ev.type + '] ' + (ev.attachmentName || '未命名') + ' · ' + (ev.sourceRole || '--') + (ev.sourceAt ? (' · ' + ev.sourceAt.replace('T', ' ')) : '') + (ev.note ? ('<br><span class="text-gray-400">' + ev.note + '</span>') : '') + '</div>';
+            }).join('') + '</div></details>')
+          : '<p class="text-[11px] text-gray-400 mt-1.5">证据锚点：0</p>';
+        return '<div onclick="selectMemoForEdit(\'' + m.id + '\')" class="w-full text-left p-3 rounded-xl border transition-colors cursor-pointer ' + (selected ? 'border-indigo-300 bg-indigo-50' : 'border-indigo-100 bg-white hover:bg-indigo-50/40') + '">' +
           '<div class="flex items-center justify-between mb-1.5">' +
             '<div class="text-xs font-semibold text-indigo-700">纪要 · ' + m.id + ' · V' + m.currentVersion + '</div>' +
             '<span class="text-[10px] px-1.5 py-0.5 rounded ' + statusMeta.cls + '">' + statusMeta.label + '</span>' +
           '</div>' +
           '<p class="text-xs text-gray-700 mb-1">议题：' + ((currentVersion && currentVersion.topic) || '--') + '</p>' +
           '<p class="text-xs text-gray-600 leading-relaxed">' + (shortSummary || '无摘要') + '</p>' +
+          (rejectReason ? '<p class="text-[11px] text-rose-600 mt-1">拒绝原因：' + rejectReason + '</p>' : '') +
+          evidenceDetails +
           '<div class="text-[10px] text-gray-400 mt-1.5 flex items-center justify-between">' +
             '<span>' + time + '</span>' +
-            '<span>' + ((currentVersion && currentVersion.relatedProposalId) ? ('关联方案：' + currentVersion.relatedProposalId) : '未关联方案') + '</span>' +
+            '<span>' + ((currentVersion && currentVersion.relatedProposalId) ? ('关联方案：' + currentVersion.relatedProposalId) : '未关联方案') + ' · 证据' + evidenceCount + '</span>' +
           '</div>' +
-        '</button>';
+        '</div>';
       }).join('');
 
       var selectedMemo = getSelectedMemo(state);
@@ -693,6 +844,7 @@
         effectiveDate: payload.effectiveDate,
         relatedProposalId: payload.relatedProposalId,
         summaryBody: payload.summaryBody,
+        evidenceAnchors: normalizeMemoEvidenceAnchors(payload.evidenceAnchors),
         confirmMeta: null,
         rejectMeta: null
       };
@@ -750,6 +902,7 @@
         effectiveDate: currentVersion.effectiveDate || '',
         relatedProposalId: currentVersion.relatedProposalId || '',
         summaryBody: currentVersion.summaryBody || '',
+        evidenceAnchors: normalizeMemoEvidenceAnchors(currentVersion.evidenceAnchors),
         revisedFromVersion: currentVersion.version,
         confirmMeta: null,
         rejectMeta: null
