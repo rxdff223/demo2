@@ -774,9 +774,23 @@ export const MAIN_HTML = `
               <textarea id="memoSummaryBody" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="补充摘要或对外确认口径"></textarea>
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-2 mt-3">
-            <button onclick="saveMemoDraft()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">保存草稿</button>
-            <button onclick="submitMemoForConfirmation()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">提交确认</button>
+          <div class="grid grid-cols-3 gap-2 mt-3">
+            <button id="memoBtnSaveDraft" onclick="saveMemoDraft()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">保存草稿</button>
+            <button id="memoBtnSubmitConfirm" onclick="submitMemoForConfirmation()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">提交确认</button>
+            <button id="memoBtnNew" onclick="clearMemoForm()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">新建</button>
+          </div>
+          <div class="mt-2">
+            <button id="memoBtnCreateRevision" onclick="createMemoRevision()" class="hidden w-full px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">基于当前版本生成修订稿</button>
+          </div>
+          <div id="memoFinancerActions" class="hidden mt-3 space-y-2">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">拒绝原因（拒绝时必填）</label>
+              <input id="memoRejectReason" type="text" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="例如：边界条件不清晰，需要补充后再确认">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="memoBtnConfirm" onclick="confirmSelectedMemo()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">确认</button>
+              <button id="memoBtnReject" onclick="rejectSelectedMemo()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700">拒绝</button>
+            </div>
           </div>
         </div>
         <div class="bg-white rounded-2xl border border-gray-100 p-5">

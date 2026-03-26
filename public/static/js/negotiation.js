@@ -193,8 +193,11 @@
       ensureMemoEditorState(state);
       state.memoEditor.selectedMemoId = '';
       setMemoFormData({});
+      var rejectReason = document.getElementById('memoRejectReason');
+      if (rejectReason) rejectReason.value = '';
       updateMemoEditorHint('当前为新建模式。必填：议题、达成内容。');
       saveNegotiationState();
+      renderMemoTab();
     }
 
     function selectMemoForEdit(memoId) {
@@ -208,9 +211,75 @@
       if (!currentVersion) return;
       state.memoEditor.selectedMemoId = memoId;
       setMemoFormData(currentVersion);
+      var rejectReason = document.getElementById('memoRejectReason');
+      if (rejectReason) rejectReason.value = '';
       var statusMeta = getMemoStatusMeta(memo.status);
       updateMemoEditorHint('当前编辑：' + memo.id + ' · V' + memo.currentVersion + ' · ' + statusMeta.label + '。');
       saveNegotiationState();
+      renderMemoTab();
+    }
+
+    function getSelectedMemo(state) {
+      if (!state) return null;
+      ensureMemoEditorState(state);
+      return (state.memos || []).find(function(item) { return item.id === state.memoEditor.selectedMemoId; }) || null;
+    }
+
+    function canInvestorEditMemo(memo) {
+      if (!memo) return true;
+      return memo.status === 'draft' || memo.status === 'rejected' || memo.status === 'revised';
+    }
+
+    function setMemoFormDisabled(disabled) {
+      [
+        'memoTopic',
+        'memoAgreedContent',
+        'memoBoundary',
+        'memoEffectiveDate',
+        'memoRelatedProposalId',
+        'memoSummaryBody'
+      ].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.disabled = !!disabled;
+      });
+    }
+
+    function renderMemoActionBar(state, selectedMemo) {
+      var isFinancer = currentPerspective === 'financer';
+      var isInvestor = !isFinancer;
+      var saveBtn = document.getElementById('memoBtnSaveDraft');
+      var submitBtn = document.getElementById('memoBtnSubmitConfirm');
+      var newBtn = document.getElementById('memoBtnNew');
+      var revisionBtn = document.getElementById('memoBtnCreateRevision');
+      var financerActions = document.getElementById('memoFinancerActions');
+      var confirmBtn = document.getElementById('memoBtnConfirm');
+      var rejectBtn = document.getElementById('memoBtnReject');
+      var rejectReason = document.getElementById('memoRejectReason');
+
+      var selectedPending = !!selectedMemo && selectedMemo.status === 'pending_confirmation';
+      var editable = isInvestor && canInvestorEditMemo(selectedMemo);
+      if (!selectedMemo && isInvestor) editable = true;
+
+      setMemoFormDisabled(!editable);
+
+      if (saveBtn) saveBtn.classList.toggle('hidden', !isInvestor);
+      if (submitBtn) submitBtn.classList.toggle('hidden', !isInvestor);
+      if (newBtn) newBtn.classList.toggle('hidden', !isInvestor);
+
+      var showRevision = isInvestor && !!selectedMemo && !canInvestorEditMemo(selectedMemo);
+      if (revisionBtn) revisionBtn.classList.toggle('hidden', !showRevision);
+
+      if (financerActions) financerActions.classList.toggle('hidden', !(isFinancer && !!selectedMemo));
+      if (confirmBtn) confirmBtn.disabled = !(isFinancer && selectedPending);
+      if (rejectBtn) rejectBtn.disabled = !(isFinancer && selectedPending);
+      if (rejectReason) rejectReason.disabled = !(isFinancer && selectedPending);
+
+      if (isInvestor && selectedMemo && !editable) {
+        updateMemoEditorHint('当前版本为「' + getMemoStatusMeta(selectedMemo.status).label + '」，不可原地编辑；请先生成修订稿。');
+      }
+      if (isFinancer && !selectedMemo) {
+        updateMemoEditorHint('请选择一条备忘录进行确认或拒绝。');
+      }
     }
 
     function applyPublicTermsToWorkbench(terms) {
@@ -524,12 +593,11 @@
       var memos = state.memos || [];
       if (memos.length === 0) {
         list.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">暂无沟通纪要。</p>';
-        if (state.memoEditor.selectedMemoId) {
-          state.memoEditor.selectedMemoId = '';
-          setMemoFormData({});
-          updateMemoEditorHint('当前为新建模式。必填：议题、达成内容。');
-          saveNegotiationState();
-        }
+        state.memoEditor.selectedMemoId = '';
+        setMemoFormData({});
+        updateMemoEditorHint('当前为新建模式。必填：议题、达成内容。');
+        renderMemoActionBar(state, null);
+        saveNegotiationState();
         return;
       }
       list.innerHTML = memos.map(function(m) {
@@ -553,10 +621,11 @@
         '</button>';
       }).join('');
 
-      var selectedMemo = memos.find(function(item) { return item.id === state.memoEditor.selectedMemoId; });
+      var selectedMemo = getSelectedMemo(state);
       if (!selectedMemo) {
         setMemoFormData({});
         updateMemoEditorHint('当前为新建模式。必填：议题、达成内容。');
+        renderMemoActionBar(state, null);
         return;
       }
       var selectedVersion = getMemoCurrentVersion(selectedMemo);
@@ -564,6 +633,7 @@
       setMemoFormData(selectedVersion);
       var selectedMeta = getMemoStatusMeta(selectedMemo.status);
       updateMemoEditorHint('当前编辑：' + selectedMemo.id + ' · V' + selectedMemo.currentVersion + ' · ' + selectedMeta.label + '。');
+      renderMemoActionBar(state, selectedMemo);
     }
 
     function validateMemoCoreFields(data) {
@@ -578,6 +648,10 @@
       if (!currentDeal) return null;
       var state = ensureNegotiationState();
       if (!state) return null;
+      if (currentPerspective === 'financer') {
+        showToast('warning', '当前为融资方视角', '融资方仅可确认或拒绝备忘录');
+        return null;
+      }
       ensureMemoEditorState(state);
 
       var payload = getMemoFormData();
@@ -598,6 +672,10 @@
         };
         state.memos.unshift(memo);
       } else {
+        if (!canInvestorEditMemo(memo)) {
+          showToast('warning', '当前版本不可直接编辑', '请先点击「基于当前版本生成修订稿」');
+          return null;
+        }
         memo.currentVersion = (memo.currentVersion || 0) + 1;
         memo.status = targetStatus;
         memo.updatedAt = now;
@@ -614,7 +692,9 @@
         boundary: payload.boundary,
         effectiveDate: payload.effectiveDate,
         relatedProposalId: payload.relatedProposalId,
-        summaryBody: payload.summaryBody
+        summaryBody: payload.summaryBody,
+        confirmMeta: null,
+        rejectMeta: null
       };
       memo.versions.push(nextVersion);
       state.memoEditor.selectedMemoId = memo.id;
@@ -636,6 +716,124 @@
       pushTimelineEvent('memo_submitted', '提交沟通备忘录待确认（' + memo.id + '）', getPublicTermsFromWorkbench());
       renderMemoTab();
       showToast('success', '已提交确认', memo.id + ' 已进入待确认状态');
+    }
+
+    function createMemoRevision() {
+      if (!currentDeal) return;
+      var state = ensureNegotiationState();
+      if (!state) return;
+      if (currentPerspective === 'financer') {
+        showToast('warning', '当前为融资方视角', '融资方不可创建修订稿');
+        return;
+      }
+      var memo = getSelectedMemo(state);
+      if (!memo) {
+        showToast('warning', '未选择备忘录', '请先选择一条备忘录');
+        return;
+      }
+      var currentVersion = getMemoCurrentVersion(memo);
+      if (!currentVersion) return;
+      var now = new Date().toISOString();
+      var nextVersionNo = (memo.currentVersion || 0) + 1;
+      memo.currentVersion = nextVersionNo;
+      memo.status = 'draft';
+      memo.updatedAt = now;
+      memo.versions.push({
+        version: nextVersionNo,
+        createdAt: now,
+        updatedAt: now,
+        author: (currentUser && (currentUser.displayName || currentUser.username)) || '我方',
+        role: currentPerspective || 'investor',
+        topic: currentVersion.topic || '',
+        agreedContent: currentVersion.agreedContent || '',
+        boundary: currentVersion.boundary || '',
+        effectiveDate: currentVersion.effectiveDate || '',
+        relatedProposalId: currentVersion.relatedProposalId || '',
+        summaryBody: currentVersion.summaryBody || '',
+        revisedFromVersion: currentVersion.version,
+        confirmMeta: null,
+        rejectMeta: null
+      });
+      state.memoEditor.selectedMemoId = memo.id;
+      saveNegotiationState();
+      pushTimelineEvent('memo_revised', '基于 ' + memo.id + ' V' + currentVersion.version + ' 生成修订稿 V' + nextVersionNo, getPublicTermsFromWorkbench());
+      renderMemoTab();
+      showToast('success', '修订稿已创建', memo.id + ' · V' + nextVersionNo + '（草稿）');
+    }
+
+    function confirmSelectedMemo() {
+      if (!currentDeal) return;
+      if (currentPerspective !== 'financer') {
+        showToast('warning', '当前为投资方视角', '请切换到融资方视角后确认');
+        return;
+      }
+      var state = ensureNegotiationState();
+      if (!state) return;
+      var memo = getSelectedMemo(state);
+      if (!memo) {
+        showToast('warning', '未选择备忘录', '请选择一条待确认备忘录');
+        return;
+      }
+      if (memo.status !== 'pending_confirmation') {
+        showToast('info', '当前状态不可确认', '仅待确认状态可执行确认');
+        return;
+      }
+      var version = getMemoCurrentVersion(memo);
+      var now = new Date().toISOString();
+      memo.status = 'confirmed';
+      memo.updatedAt = now;
+      if (version) {
+        version.confirmMeta = {
+          role: currentPerspective || 'financer',
+          actor: (currentUser && (currentUser.displayName || currentUser.username)) || '融资方',
+          at: now
+        };
+        version.rejectMeta = null;
+      }
+      saveNegotiationState();
+      pushTimelineEvent('memo_confirmed', '确认备忘录（' + memo.id + ' · V' + memo.currentVersion + '）', getPublicTermsFromWorkbench());
+      renderMemoTab();
+      showToast('success', '已确认', memo.id + ' 已确认');
+    }
+
+    function rejectSelectedMemo() {
+      if (!currentDeal) return;
+      if (currentPerspective !== 'financer') {
+        showToast('warning', '当前为投资方视角', '请切换到融资方视角后拒绝');
+        return;
+      }
+      var state = ensureNegotiationState();
+      if (!state) return;
+      var memo = getSelectedMemo(state);
+      if (!memo) {
+        showToast('warning', '未选择备忘录', '请选择一条待确认备忘录');
+        return;
+      }
+      if (memo.status !== 'pending_confirmation') {
+        showToast('info', '当前状态不可拒绝', '仅待确认状态可执行拒绝');
+        return;
+      }
+      var reason = (document.getElementById('memoRejectReason')?.value || '').trim();
+      if (!reason) {
+        showToast('warning', '请填写拒绝原因', '拒绝备忘录时需填写原因');
+        return;
+      }
+      var version = getMemoCurrentVersion(memo);
+      var now = new Date().toISOString();
+      memo.status = 'rejected';
+      memo.updatedAt = now;
+      if (version) {
+        version.rejectMeta = {
+          role: currentPerspective || 'financer',
+          actor: (currentUser && (currentUser.displayName || currentUser.username)) || '融资方',
+          at: now,
+          reason: reason
+        };
+      }
+      saveNegotiationState();
+      pushTimelineEvent('memo_rejected', '拒绝备忘录（' + memo.id + ' · V' + memo.currentVersion + '）', getPublicTermsFromWorkbench());
+      renderMemoTab();
+      showToast('info', '已拒绝', memo.id + ' 已拒绝，原因已记录');
     }
 
     function renderNegotiationTab() {
