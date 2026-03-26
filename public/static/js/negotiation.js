@@ -160,12 +160,14 @@
       if (!Array.isArray(items)) return [];
       return items.map(function(item) {
         var src = item || {};
+        var size = Number(src.fileSize);
         return {
-          type: src.type || 'screenshot',
-          sourceRole: src.sourceRole || '',
-          sourceAt: src.sourceAt || '',
+          fileName: src.fileName || src.attachmentName || '未命名文件',
+          fileSize: Number.isFinite(size) && size >= 0 ? size : 0,
+          mimeType: src.mimeType || src.type || '',
+          uploadedAt: src.uploadedAt || src.sourceAt || '',
           note: src.note || '',
-          attachmentName: src.attachmentName || ''
+          localId: src.localId || ('L_' + Date.now() + '_' + Math.floor(Math.random() * 1000))
         };
       });
     }
@@ -313,7 +315,6 @@
     }
 
     function getMemoFormData() {
-      syncMemoEvidenceDraftFromDom();
       var state = ensureNegotiationState();
       return {
         topic: (document.getElementById('memoTopic')?.value || '').trim(),
@@ -339,30 +340,6 @@
       renderMemoEvidenceEditor();
     }
 
-    function syncMemoEvidenceDraftFromDom() {
-      var state = ensureNegotiationState();
-      if (!state) return;
-      ensureMemoEditorState(state);
-      var rows = document.querySelectorAll('.memo-evidence-row');
-      if (!rows.length) return;
-      var next = [];
-      rows.forEach(function(row) {
-        var type = row.querySelector('[data-field="type"]');
-        var sourceRole = row.querySelector('[data-field="sourceRole"]');
-        var sourceAt = row.querySelector('[data-field="sourceAt"]');
-        var note = row.querySelector('[data-field="note"]');
-        var attachmentName = row.querySelector('[data-field="attachmentName"]');
-        next.push({
-          type: (type && type.value) || 'screenshot',
-          sourceRole: (sourceRole && sourceRole.value) || '',
-          sourceAt: (sourceAt && sourceAt.value) || '',
-          note: (note && note.value) || '',
-          attachmentName: (attachmentName && attachmentName.value) || ''
-        });
-      });
-      state.memoEditor.evidenceDraft = normalizeMemoEvidenceAnchors(next);
-    }
-
     function renderMemoEvidenceEditor() {
       var state = ensureNegotiationState();
       if (!state) return;
@@ -376,51 +353,56 @@
         return;
       }
       list.innerHTML = items.map(function(item, idx) {
+        var when = item.uploadedAt ? item.uploadedAt.slice(0, 16).replace('T', ' ') : '--';
+        var type = item.mimeType || '--';
         return '<div class="memo-evidence-row p-2 rounded-lg border border-gray-200 bg-white" data-index="' + idx + '">' +
-          '<div class="grid grid-cols-1 md:grid-cols-2 gap-2">' +
-            '<div>' +
-              '<label class="block text-[10px] text-gray-500 mb-0.5">类型</label>' +
-              '<select class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs bg-white" data-field="type" onchange="updateMemoEvidenceField(' + idx + ', &quot;type&quot;, this.value)">' +
-                '<option value="screenshot" ' + (item.type === 'screenshot' ? 'selected' : '') + '>截图</option>' +
-                '<option value="transcript" ' + (item.type === 'transcript' ? 'selected' : '') + '>语音转写</option>' +
-                '<option value="file" ' + (item.type === 'file' ? 'selected' : '') + '>文件</option>' +
-              '</select>' +
+          '<div class="flex items-start justify-between gap-2">' +
+            '<div class="min-w-0">' +
+              '<p class="text-xs font-medium text-gray-800 truncate">' + escapeMemoText(item.fileName || '未命名文件') + '</p>' +
+              '<p class="text-[11px] text-gray-500 mt-0.5">' + escapeMemoText(type) + ' · ' + formatMemoFileSize(item.fileSize) + ' · 上传于 ' + escapeMemoText(when) + '</p>' +
             '</div>' +
-            '<div>' +
-              '<label class="block text-[10px] text-gray-500 mb-0.5">来源角色</label>' +
-              '<input class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" data-field="sourceRole" value="' + item.sourceRole + '" placeholder="投资方/融资方" oninput="updateMemoEvidenceField(' + idx + ', &quot;sourceRole&quot;, this.value)">' +
-            '</div>' +
-            '<div>' +
-              '<label class="block text-[10px] text-gray-500 mb-0.5">时间</label>' +
-              '<input type="datetime-local" class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" data-field="sourceAt" value="' + item.sourceAt + '" oninput="updateMemoEvidenceField(' + idx + ', &quot;sourceAt&quot;, this.value)">' +
-            '</div>' +
-            '<div>' +
-              '<label class="block text-[10px] text-gray-500 mb-0.5">附件名称</label>' +
-              '<input class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" data-field="attachmentName" value="' + item.attachmentName + '" placeholder="wechat-shot-0326.png" oninput="updateMemoEvidenceField(' + idx + ', &quot;attachmentName&quot;, this.value)">' +
-            '</div>' +
+            '<button class="memo-evidence-remove-btn shrink-0 px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="removeMemoEvidenceItem(' + idx + ')">删除</button>' +
           '</div>' +
           '<div class="mt-2">' +
-            '<label class="block text-[10px] text-gray-500 mb-0.5">备注</label>' +
-            '<textarea class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" rows="2" data-field="note" placeholder="该证据说明..." oninput="updateMemoEvidenceField(' + idx + ', &quot;note&quot;, this.value)">' + item.note + '</textarea>' +
-          '</div>' +
-          '<div class="mt-1.5 text-right">' +
-            '<button class="memo-evidence-remove-btn px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="removeMemoEvidenceItem(' + idx + ')">删除</button>' +
+            '<label class="block text-[10px] text-gray-500 mb-0.5">备注（可选）</label>' +
+            '<textarea class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" rows="2" placeholder="可填写补充说明" oninput="updateMemoEvidenceNote(' + idx + ', this.value)">' + escapeMemoText(item.note) + '</textarea>' +
           '</div>' +
         '</div>';
       }).join('');
     }
 
-    function addMemoEvidenceItem() {
+    function formatMemoFileSize(bytes) {
+      var size = Number(bytes);
+      if (!Number.isFinite(size) || size <= 0) return '--';
+      if (size < 1024) return size + 'B';
+      if (size < 1024 * 1024) return (size / 1024).toFixed(1) + 'KB';
+      return (size / 1024 / 1024).toFixed(1) + 'MB';
+    }
+
+    function triggerMemoEvidenceUpload() {
+      var picker = document.getElementById('memoEvidenceFileInput');
+      if (picker && !picker.disabled) picker.click();
+    }
+
+    function handleMemoEvidenceFiles(fileList) {
       var state = ensureNegotiationState();
       if (!state) return;
       ensureMemoEditorState(state);
-      state.memoEditor.evidenceDraft.push({
-        type: 'screenshot',
-        sourceRole: '',
-        sourceAt: '',
-        note: '',
-        attachmentName: ''
+      var files = Array.from(fileList || []);
+      if (!files.length) return;
+      var now = new Date().toISOString();
+      files.forEach(function(file) {
+        state.memoEditor.evidenceDraft.push({
+          fileName: file.name || '未命名文件',
+          fileSize: Number(file.size) || 0,
+          mimeType: file.type || '',
+          uploadedAt: now,
+          note: '',
+          localId: 'L_' + Date.now() + '_' + Math.floor(Math.random() * 1000)
+        });
       });
+      var picker = document.getElementById('memoEvidenceFileInput');
+      if (picker) picker.value = '';
       renderMemoEvidenceEditor();
     }
 
@@ -433,12 +415,12 @@
       renderMemoEvidenceEditor();
     }
 
-    function updateMemoEvidenceField(index, field, value) {
+    function updateMemoEvidenceNote(index, value) {
       var state = ensureNegotiationState();
       if (!state) return;
       ensureMemoEditorState(state);
       if (!state.memoEditor.evidenceDraft[index]) return;
-      state.memoEditor.evidenceDraft[index][field] = value;
+      state.memoEditor.evidenceDraft[index].note = value || '';
     }
 
     function setMemoDiffDefaults(state, memo) {
@@ -720,8 +702,10 @@
         var el = document.getElementById(id);
         if (el) el.disabled = !!disabled;
       });
-      var addBtn = document.getElementById('memoEvidenceAddBtn');
+      var addBtn = document.getElementById('memoEvidenceUploadBtn');
       if (addBtn) addBtn.disabled = !!disabled;
+      var fileInput = document.getElementById('memoEvidenceFileInput');
+      if (fileInput) fileInput.disabled = !!disabled;
       document.querySelectorAll('.memo-evidence-input, .memo-evidence-remove-btn').forEach(function(el) {
         el.disabled = !!disabled;
       });
@@ -1113,7 +1097,8 @@
         var evidenceCount = evidences.length;
         var evidenceDetails = evidenceCount > 0
           ? ('<details class="mt-1.5 text-[11px] text-gray-500" onclick="event.stopPropagation()"><summary class="cursor-pointer select-none">查看证据详情（' + evidenceCount + '）</summary><div class="mt-1 space-y-1">' + evidences.map(function(ev, i) {
-              return '<div class="p-1.5 rounded bg-gray-50 border border-gray-100"><span class="font-medium">#' + (i + 1) + '</span> [' + ev.type + '] ' + (ev.attachmentName || '未命名') + ' · ' + (ev.sourceRole || '--') + (ev.sourceAt ? (' · ' + ev.sourceAt.replace('T', ' ')) : '') + (ev.note ? ('<br><span class="text-gray-400">' + ev.note + '</span>') : '') + '</div>';
+              var when = ev.uploadedAt ? ev.uploadedAt.replace('T', ' ').slice(0, 16) : '--';
+              return '<div class="p-1.5 rounded bg-gray-50 border border-gray-100"><span class="font-medium">#' + (i + 1) + '</span> ' + escapeMemoText(ev.fileName || '未命名文件') + ' · ' + escapeMemoText(formatMemoFileSize(ev.fileSize)) + ' · ' + escapeMemoText(ev.mimeType || '--') + ' · ' + escapeMemoText(when) + (ev.note ? ('<br><span class="text-gray-400">' + escapeMemoText(ev.note) + '</span>') : '') + '</div>';
             }).join('') + '</div></details>')
           : '<p class="text-[11px] text-gray-400 mt-1.5">证据锚点：0</p>';
         return '<div onclick="selectMemoForEdit(\'' + m.id + '\')" class="w-full text-left p-3 rounded-xl border transition-colors cursor-pointer ' + (selected ? 'border-indigo-300 bg-indigo-50' : 'border-indigo-100 bg-white hover:bg-indigo-50/40') + '">' +

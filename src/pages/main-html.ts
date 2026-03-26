@@ -760,9 +760,10 @@ export const MAIN_HTML = `
             <div class="border border-gray-100 rounded-lg p-3 bg-gray-50/50">
               <div class="flex items-center justify-between mb-2">
                 <label class="block text-xs font-semibold text-gray-600">证据锚点</label>
-                <button id="memoEvidenceAddBtn" onclick="addMemoEvidenceItem()" class="px-2 py-1 text-[11px] font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-white">新增证据</button>
+                <button id="memoEvidenceUploadBtn" onclick="triggerMemoEvidenceUpload()" class="px-2 py-1 text-[11px] font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-white">上传文件</button>
               </div>
-              <p class="text-[11px] text-gray-400 mb-2">支持截图、语音转写、文件等证据锚点，便于后续回溯共识来源。</p>
+              <p class="text-[11px] text-gray-400 mb-2">支持多文件上传，系统仅保存文件元信息用于回溯。</p>
+              <input id="memoEvidenceFileInput" type="file" class="hidden" multiple onchange="handleMemoEvidenceFiles(this.files)">
               <div id="memoEvidenceList" class="space-y-2">
                 <p class="text-xs text-gray-400">暂无证据锚点</p>
               </div>
