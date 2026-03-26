@@ -562,6 +562,20 @@
       }
     }
 
+    function setMemoDiffToLatestPair(state, memo) {
+      if (!state || !memo) return;
+      ensureMemoEditorState(state);
+      var latestVersionNo = Number(memo.currentVersion || 0);
+      if (!Number.isFinite(latestVersionNo) || latestVersionNo < 1) {
+        state.memoEditor.diffVersionA = '';
+        state.memoEditor.diffVersionB = '';
+        return;
+      }
+      var previousVersionNo = latestVersionNo - 1;
+      state.memoEditor.diffVersionA = String(latestVersionNo);
+      state.memoEditor.diffVersionB = String(previousVersionNo >= 1 ? previousVersionNo : latestVersionNo);
+    }
+
     function renderMemoDiffSelectors(state, memo) {
       var aSel = document.getElementById('memoDiffVersionA');
       var bSel = document.getElementById('memoDiffVersionB');
@@ -1335,6 +1349,7 @@
       };
       memo.versions.push(nextVersion);
       state.memoEditor.selectedMemoId = memo.id;
+      setMemoDiffToLatestPair(state, memo);
       saveNegotiationState();
       return memo;
     }
@@ -1393,8 +1408,7 @@
         rejectMeta: null
       });
       state.memoEditor.selectedMemoId = memo.id;
-      state.memoEditor.diffVersionA = String(nextVersionNo);
-      state.memoEditor.diffVersionB = String(baseVersion.version);
+      setMemoDiffToLatestPair(state, memo);
       state.memoEditor.lastPrimaryAction = 'revision';
       saveNegotiationState();
       pushTimelineEvent('memo_revised', '基于 ' + memo.id + ' V' + baseVersion.version + ' 生成修订稿 V' + nextVersionNo, getPublicTermsFromWorkbench());
