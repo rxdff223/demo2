@@ -188,7 +188,7 @@
       var activeText = isFinancer ? 'text-amber-700' : 'text-teal-700';
       var inactiveBg = isFinancer ? 'bg-teal-50' : 'bg-amber-50';
       var inactiveText = isFinancer ? 'text-teal-700' : 'text-amber-700';
-      const tabs = ['research', 'forecast', 'workbench', 'intent', 'negotiation', 'timeline'];
+      const tabs = ['research', 'forecast', 'workbench', 'intent', 'negotiation', 'memo', 'timeline'];
       tabs.forEach(t => {
         const panel = document.getElementById('sessionTab-' + t);
         const btn = document.getElementById('sessionTabBtn-' + t);
@@ -210,6 +210,7 @@
       }
       if (tab === 'intent') renderIntentTab();
       if (tab === 'negotiation') renderNegotiationTab();
+      if (tab === 'memo') renderMemoTab();
       if (tab === 'timeline') renderTimelineTab();
     }
 
