@@ -754,7 +754,7 @@ export const MAIN_HTML = `
               <textarea id="memoAgreedContent" rows="3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="记录双方已达成的一致内容"></textarea>
             </div>
             <div>
-              <label class="block text-xs text-gray-500 mb-1">摘要正文（可选）</label>
+              <label class="block text-xs text-gray-500 mb-1">摘要正文（选填）</label>
               <textarea id="memoSummaryBody" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="补充摘要或对外确认口径"></textarea>
             </div>
             <div class="border border-gray-100 rounded-lg p-3 bg-gray-50/50">
