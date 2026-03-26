@@ -153,6 +153,8 @@
       return items.map(function(item) {
         var src = item || {};
         var size = Number(src.fileSize);
+        var sourceAtRaw = src.sourceAt || src.uploadedAt || '';
+        var normalizedSourceAt = sourceAtRaw ? String(sourceAtRaw).slice(0, 16) : '';
         var recognizedText = String(src.recognizedText || '');
         var recognitionStatus = src.recognitionStatus || (recognizedText ? 'success' : 'pending');
         return {
@@ -160,6 +162,8 @@
           fileSize: Number.isFinite(size) && size >= 0 ? size : 0,
           mimeType: src.mimeType || src.type || '',
           uploadedAt: src.uploadedAt || src.sourceAt || '',
+          sourceRole: src.sourceRole || '',
+          sourceAt: normalizedSourceAt,
           note: src.note || '',
           recognizedText: recognizedText,
           recognitionStatus: recognitionStatus,
@@ -341,8 +345,9 @@
         return;
       }
       list.innerHTML = items.map(function(item, idx) {
-        var when = item.uploadedAt ? item.uploadedAt.slice(0, 16).replace('T', ' ') : '--';
+        var when = item.sourceAt ? item.sourceAt.replace('T', ' ') : '--';
         var type = item.mimeType || '--';
+        var sourceRole = item.sourceRole || '--';
         var meta = getMemoRecognitionStatusMeta(item.recognitionStatus);
         var preview = String(item.recognizedText || '').trim();
         if (preview.length > 120) preview = preview.slice(0, 120) + '...';
@@ -350,11 +355,25 @@
           '<div class="flex items-start justify-between gap-2">' +
             '<div class="min-w-0">' +
               '<p class="text-xs font-medium text-gray-800 truncate">' + escapeMemoText(item.fileName || '未命名文件') + '</p>' +
-              '<p class="text-[11px] text-gray-500 mt-0.5">' + escapeMemoText(type) + ' · ' + formatMemoFileSize(item.fileSize) + ' · 上传于 ' + escapeMemoText(when) + '</p>' +
+              '<p class="text-[11px] text-gray-500 mt-0.5">' + escapeMemoText(type) + ' · ' + formatMemoFileSize(item.fileSize) + ' · 来源：' + escapeMemoText(sourceRole) + ' · 时间：' + escapeMemoText(when) + '</p>' +
               '<p class="text-[11px] mt-1"><span class="px-1.5 py-0.5 rounded ' + meta.cls + '">' + meta.label + '</span></p>' +
               (preview ? '<p class="text-[11px] text-gray-500 mt-1">识别预览：' + escapeMemoText(preview) + '</p>' : '') +
             '</div>' +
             '<button class="memo-evidence-remove-btn shrink-0 px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="removeMemoEvidenceItem(' + idx + ')">删除</button>' +
+          '</div>' +
+          '<div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">' +
+            '<div>' +
+              '<label class="block text-[10px] text-gray-500 mb-0.5">来源角色</label>' +
+              '<select class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs bg-white" onchange="updateMemoEvidenceField(' + idx + ', &quot;sourceRole&quot;, this.value)">' +
+                '<option value="" ' + (!item.sourceRole ? 'selected' : '') + '>未填写</option>' +
+                '<option value="投资方" ' + (item.sourceRole === '投资方' ? 'selected' : '') + '>投资方</option>' +
+                '<option value="融资方" ' + (item.sourceRole === '融资方' ? 'selected' : '') + '>融资方</option>' +
+              '</select>' +
+            '</div>' +
+            '<div>' +
+              '<label class="block text-[10px] text-gray-500 mb-0.5">来源时间</label>' +
+              '<input type="datetime-local" class="memo-evidence-input w-full px-2 py-1.5 border border-gray-200 rounded text-xs" value="' + escapeMemoText(item.sourceAt || '') + '" oninput="updateMemoEvidenceField(' + idx + ', &quot;sourceAt&quot;, this.value)">' +
+            '</div>' +
           '</div>' +
           '<div class="mt-2">' +
             '<label class="block text-[10px] text-gray-500 mb-0.5">备注（可选）</label>' +
@@ -439,10 +458,13 @@
       ensureMemoEditorState(state);
       var files = Array.from(fileList || []);
       if (!files.length) return;
+      var roleLabel = currentPerspective === 'financer' ? '融资方' : '投资方';
       var analyzed = await Promise.all(files.map(function(file) {
         return recognizeMemoFileFromUpload(file);
       }));
       analyzed.forEach(function(item) {
+        item.sourceRole = item.sourceRole || roleLabel;
+        if (!item.sourceAt) item.sourceAt = String(item.uploadedAt || '').slice(0, 16);
         state.memoEditor.evidenceDraft.push(item);
       });
       var picker = document.getElementById('memoEvidenceFileInput');
@@ -465,12 +487,16 @@
       renderMemoEvidenceEditor();
     }
 
-    function updateMemoEvidenceNote(index, value) {
+    function updateMemoEvidenceField(index, field, value) {
       var state = ensureNegotiationState();
       if (!state) return;
       ensureMemoEditorState(state);
       if (!state.memoEditor.evidenceDraft[index]) return;
-      state.memoEditor.evidenceDraft[index].note = value || '';
+      state.memoEditor.evidenceDraft[index][field] = value || '';
+    }
+
+    function updateMemoEvidenceNote(index, value) {
+      updateMemoEvidenceField(index, 'note', value);
     }
 
     function buildMemoSummaryFromEvidence(items) {
@@ -617,6 +643,8 @@
           : vStatus === 'draft' ? 'bg-gray-100 text-gray-600'
           : 'bg-indigo-100 text-indigo-700';
         var at = (v.updatedAt || v.createdAt || '').slice(0, 16).replace('T', ' ');
+        var investorConfirm = confirmMeta.investor ? ((confirmMeta.investor.actor || '投资方') + ' @ ' + String(confirmMeta.investor.at || '').slice(0, 16).replace('T', ' ')) : '未确认';
+        var financerConfirm = confirmMeta.financer ? ((confirmMeta.financer.actor || '融资方') + ' @ ' + String(confirmMeta.financer.at || '').slice(0, 16).replace('T', ' ')) : '未确认';
         return '<div class="p-2.5 rounded-lg border border-gray-100 bg-gray-50">' +
           '<div class="flex items-center justify-between">' +
             '<div class="text-xs text-gray-700 font-semibold">V' + v.version + (isCurrent ? '（当前）' : '') + '</div>' +
@@ -624,6 +652,8 @@
           '</div>' +
           '<p class="text-[11px] text-gray-500 mt-1">编辑人：' + (v.author || '--') + ' · 角色：' + (v.role || '--') + ' · 时间：' + at + '</p>' +
           '<p class="text-[11px] text-gray-400 mt-1">双向确认：' + confirmCount + '/2（投资方' + (confirmMeta.investor ? '已确认' : '未确认') + '，融资方' + (confirmMeta.financer ? '已确认' : '未确认') + '）</p>' +
+          '<p class="text-[11px] text-gray-400 mt-1">投资方确认：' + escapeMemoText(investorConfirm) + '</p>' +
+          '<p class="text-[11px] text-gray-400 mt-1">融资方确认：' + escapeMemoText(financerConfirm) + '</p>' +
           '<div class="mt-1.5 flex items-center gap-2">' +
             '<button onclick="updateMemoDiffSelection(&quot;A&quot;, &quot;' + v.version + '&quot;)" class="px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-700 hover:bg-white">设为版本A</button>' +
             '<button onclick="updateMemoDiffSelection(&quot;B&quot;, &quot;' + v.version + '&quot;)" class="px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-700 hover:bg-white">设为版本B</button>' +
@@ -1099,8 +1129,9 @@
         var evidenceCount = evidences.length;
         var evidenceDetails = evidenceCount > 0
           ? ('<details class="mt-1.5 text-[11px] text-gray-500" onclick="event.stopPropagation()"><summary class="cursor-pointer select-none">查看证据详情（' + evidenceCount + '）</summary><div class="mt-1 space-y-1">' + evidences.map(function(ev, i) {
-              var when = ev.uploadedAt ? ev.uploadedAt.replace('T', ' ').slice(0, 16) : '--';
-              return '<div class="p-1.5 rounded bg-gray-50 border border-gray-100"><span class="font-medium">#' + (i + 1) + '</span> ' + escapeMemoText(ev.fileName || '未命名文件') + ' · ' + escapeMemoText(formatMemoFileSize(ev.fileSize)) + ' · ' + escapeMemoText(ev.mimeType || '--') + ' · ' + escapeMemoText(when) + (ev.note ? ('<br><span class="text-gray-400">' + escapeMemoText(ev.note) + '</span>') : '') + '</div>';
+              var when = (ev.sourceAt || ev.uploadedAt) ? String(ev.sourceAt || ev.uploadedAt).replace('T', ' ').slice(0, 16) : '--';
+              var sourceRole = ev.sourceRole || '--';
+              return '<div class="p-1.5 rounded bg-gray-50 border border-gray-100"><span class="font-medium">#' + (i + 1) + '</span> ' + escapeMemoText(ev.fileName || '未命名文件') + ' · ' + escapeMemoText(formatMemoFileSize(ev.fileSize)) + ' · ' + escapeMemoText(ev.mimeType || '--') + ' · 来源：' + escapeMemoText(sourceRole) + ' · ' + escapeMemoText(when) + (ev.note ? ('<br><span class="text-gray-400">' + escapeMemoText(ev.note) + '</span>') : '') + '</div>';
             }).join('') + '</div></details>')
           : '<p class="text-[11px] text-gray-400 mt-1.5">备忘录文件：0</p>';
         return '<div onclick="selectMemoForEdit(\'' + m.id + '\')" class="w-full text-left p-3 rounded-xl border transition-colors cursor-pointer ' + (selected ? 'border-indigo-300 bg-indigo-50' : 'border-indigo-100 bg-white hover:bg-indigo-50/40') + '">' +
@@ -1141,10 +1172,17 @@
       renderMemoVersionHistory(state, selectedMemo);
     }
 
-    function validateMemoCoreFields(data) {
+    function validateMemoCoreFields(data, targetStatus) {
       if (!data.topic || !data.agreedContent) {
         showToast('warning', '请补充必填字段', '至少填写「议题」和「达成内容」');
         return false;
+      }
+      if (targetStatus !== 'draft') {
+        var evidenceCount = normalizeMemoEvidenceAnchors(data.evidenceAnchors).length;
+        if (evidenceCount < 1) {
+          showToast('warning', '缺少备忘录文件', '提交确认前至少上传 1 个备忘录文件');
+          return false;
+        }
       }
       return true;
     }
@@ -1156,7 +1194,7 @@
       ensureMemoEditorState(state);
 
       var payload = getMemoFormData();
-      if (!validateMemoCoreFields(payload)) return null;
+      if (!validateMemoCoreFields(payload, targetStatus)) return null;
 
       var now = new Date().toISOString();
       var selectedId = state.memoEditor.selectedMemoId;
