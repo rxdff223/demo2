@@ -760,9 +760,12 @@ export const MAIN_HTML = `
             <div class="border border-gray-100 rounded-lg p-3 bg-gray-50/50">
               <div class="flex items-center justify-between mb-2">
                 <label class="block text-xs font-semibold text-gray-600">备忘录文件</label>
-                <button id="memoEvidenceUploadBtn" onclick="triggerMemoEvidenceUpload()" class="px-2 py-1 text-[11px] font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-white">上传文件</button>
+                <div class="flex items-center gap-2">
+                  <button id="memoEvidenceUploadBtn" onclick="triggerMemoEvidenceUpload()" class="px-2 py-1 text-[11px] font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-white">上传文件</button>
+                  <button id="memoEvidenceAiBtn" onclick="recognizeMemoFilesToSummary()" class="px-2 py-1 text-[11px] font-semibold rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50">AI识别写入摘要</button>
+                </div>
               </div>
-              <p class="text-[11px] text-gray-400 mb-2">支持多文件上传，系统仅保存文件元信息用于回溯。</p>
+              <p class="text-[11px] text-gray-400 mb-2">支持多文件上传；文本类文件会自动识别内容，点击“AI识别写入摘要”可回填到摘要正文。</p>
               <input id="memoEvidenceFileInput" type="file" class="hidden" multiple onchange="handleMemoEvidenceFiles(this.files)">
               <div id="memoEvidenceList" class="space-y-2">
                 <p class="text-xs text-gray-400">暂无备忘录文件</p>

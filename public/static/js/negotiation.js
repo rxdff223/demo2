@@ -161,15 +161,27 @@
       return items.map(function(item) {
         var src = item || {};
         var size = Number(src.fileSize);
+        var recognizedText = String(src.recognizedText || '');
+        var recognitionStatus = src.recognitionStatus || (recognizedText ? 'success' : 'pending');
         return {
           fileName: src.fileName || src.attachmentName || '未命名文件',
           fileSize: Number.isFinite(size) && size >= 0 ? size : 0,
           mimeType: src.mimeType || src.type || '',
           uploadedAt: src.uploadedAt || src.sourceAt || '',
           note: src.note || '',
+          recognizedText: recognizedText,
+          recognitionStatus: recognitionStatus,
           localId: src.localId || ('L_' + Date.now() + '_' + Math.floor(Math.random() * 1000))
         };
       });
+    }
+
+    function getMemoRecognitionStatusMeta(status) {
+      if (status === 'success') return { label: '已识别', cls: 'bg-emerald-100 text-emerald-700' };
+      if (status === 'unsupported') return { label: '不支持', cls: 'bg-gray-100 text-gray-600' };
+      if (status === 'empty') return { label: '空文件', cls: 'bg-amber-100 text-amber-700' };
+      if (status === 'error') return { label: '识别失败', cls: 'bg-rose-100 text-rose-700' };
+      return { label: '待识别', cls: 'bg-slate-100 text-slate-600' };
     }
 
     function normalizeMemoConfirmMeta(raw, fallbackStatus, fallbackActor, fallbackAt) {
@@ -355,11 +367,16 @@
       list.innerHTML = items.map(function(item, idx) {
         var when = item.uploadedAt ? item.uploadedAt.slice(0, 16).replace('T', ' ') : '--';
         var type = item.mimeType || '--';
+        var meta = getMemoRecognitionStatusMeta(item.recognitionStatus);
+        var preview = String(item.recognizedText || '').trim();
+        if (preview.length > 120) preview = preview.slice(0, 120) + '...';
         return '<div class="memo-evidence-row p-2 rounded-lg border border-gray-200 bg-white" data-index="' + idx + '">' +
           '<div class="flex items-start justify-between gap-2">' +
             '<div class="min-w-0">' +
               '<p class="text-xs font-medium text-gray-800 truncate">' + escapeMemoText(item.fileName || '未命名文件') + '</p>' +
               '<p class="text-[11px] text-gray-500 mt-0.5">' + escapeMemoText(type) + ' · ' + formatMemoFileSize(item.fileSize) + ' · 上传于 ' + escapeMemoText(when) + '</p>' +
+              '<p class="text-[11px] mt-1"><span class="px-1.5 py-0.5 rounded ' + meta.cls + '">' + meta.label + '</span></p>' +
+              (preview ? '<p class="text-[11px] text-gray-500 mt-1">识别预览：' + escapeMemoText(preview) + '</p>' : '') +
             '</div>' +
             '<button class="memo-evidence-remove-btn shrink-0 px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="removeMemoEvidenceItem(' + idx + ')">删除</button>' +
           '</div>' +
@@ -379,31 +396,88 @@
       return (size / 1024 / 1024).toFixed(1) + 'MB';
     }
 
+    function cleanMemoRecognizedText(text) {
+      return String(text || '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\u0000/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
+    function isMemoTextLikeFile(file) {
+      if (!file) return false;
+      var type = String(file.type || '').toLowerCase();
+      if (type.startsWith('text/')) return true;
+      if (type === 'application/json' || type === 'application/xml' || type === 'application/x-yaml') return true;
+      var name = String(file.name || '').toLowerCase();
+      var dot = name.lastIndexOf('.');
+      var ext = dot >= 0 ? name.slice(dot + 1) : '';
+      return [
+        'txt', 'md', 'markdown', 'csv', 'json', 'xml', 'yaml', 'yml',
+        'log', 'html', 'htm', 'css', 'js', 'ts', 'jsx', 'tsx'
+      ].includes(ext);
+    }
+
+    async function recognizeMemoFileFromUpload(file) {
+      var now = new Date().toISOString();
+      var base = {
+        fileName: (file && file.name) || '未命名文件',
+        fileSize: Number(file && file.size) || 0,
+        mimeType: (file && file.type) || '',
+        uploadedAt: now,
+        note: '',
+        recognizedText: '',
+        recognitionStatus: 'pending',
+        localId: 'L_' + Date.now() + '_' + Math.floor(Math.random() * 1000)
+      };
+
+      if (!isMemoTextLikeFile(file)) {
+        base.recognitionStatus = 'unsupported';
+        return base;
+      }
+      try {
+        var raw = await file.text();
+        var text = cleanMemoRecognizedText(raw);
+        if (!text) {
+          base.recognitionStatus = 'empty';
+          return base;
+        }
+        if (text.length > 3000) text = text.slice(0, 3000) + '\n...[已截断]';
+        base.recognizedText = text;
+        base.recognitionStatus = 'success';
+        return base;
+      } catch (e) {
+        base.recognitionStatus = 'error';
+        return base;
+      }
+    }
+
     function triggerMemoEvidenceUpload() {
       var picker = document.getElementById('memoEvidenceFileInput');
       if (picker && !picker.disabled) picker.click();
     }
 
-    function handleMemoEvidenceFiles(fileList) {
+    async function handleMemoEvidenceFiles(fileList) {
       var state = ensureNegotiationState();
       if (!state) return;
       ensureMemoEditorState(state);
       var files = Array.from(fileList || []);
       if (!files.length) return;
-      var now = new Date().toISOString();
-      files.forEach(function(file) {
-        state.memoEditor.evidenceDraft.push({
-          fileName: file.name || '未命名文件',
-          fileSize: Number(file.size) || 0,
-          mimeType: file.type || '',
-          uploadedAt: now,
-          note: '',
-          localId: 'L_' + Date.now() + '_' + Math.floor(Math.random() * 1000)
-        });
+      var analyzed = await Promise.all(files.map(function(file) {
+        return recognizeMemoFileFromUpload(file);
+      }));
+      analyzed.forEach(function(item) {
+        state.memoEditor.evidenceDraft.push(item);
       });
       var picker = document.getElementById('memoEvidenceFileInput');
       if (picker) picker.value = '';
       renderMemoEvidenceEditor();
+      var successCount = analyzed.filter(function(item) { return item.recognitionStatus === 'success'; }).length;
+      if (successCount > 0) {
+        showToast('success', '文件已上传并识别', '已识别 ' + successCount + ' 个文件，可点击「AI识别写入摘要」');
+      } else {
+        showToast('info', '文件已上传', '当前文件类型暂无可识别文本');
+      }
     }
 
     function removeMemoEvidenceItem(index) {
@@ -421,6 +495,47 @@
       ensureMemoEditorState(state);
       if (!state.memoEditor.evidenceDraft[index]) return;
       state.memoEditor.evidenceDraft[index].note = value || '';
+    }
+
+    function buildMemoSummaryFromEvidence(items) {
+      var rows = (items || []).filter(function(item) {
+        return item && item.recognitionStatus === 'success' && String(item.recognizedText || '').trim();
+      });
+      if (!rows.length) return '';
+      var lines = ['【AI识别摘要】'];
+      rows.forEach(function(item, idx) {
+        var text = cleanMemoRecognizedText(item.recognizedText);
+        if (text.length > 600) text = text.slice(0, 600) + '...';
+        lines.push('');
+        lines.push((idx + 1) + '. 文件：' + (item.fileName || '未命名文件'));
+        lines.push(text || '（无可用文本）');
+      });
+      var out = lines.join('\n');
+      if (out.length > 5000) out = out.slice(0, 5000) + '\n...[已截断]';
+      return out;
+    }
+
+    function recognizeMemoFilesToSummary() {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      var items = normalizeMemoEvidenceAnchors(state.memoEditor.evidenceDraft);
+      state.memoEditor.evidenceDraft = items;
+      if (!items.length) {
+        showToast('warning', '暂无备忘录文件', '请先上传文件');
+        return;
+      }
+      var summary = buildMemoSummaryFromEvidence(items);
+      if (!summary) {
+        showToast('warning', '暂无可识别文本', '请上传 txt/md/csv/json 等文本类文件');
+        return;
+      }
+      var summaryBody = document.getElementById('memoSummaryBody');
+      if (summaryBody) {
+        var existing = String(summaryBody.value || '').trim();
+        summaryBody.value = existing ? (existing + '\n\n' + summary) : summary;
+      }
+      showToast('success', 'AI识别完成', '内容已写入摘要正文');
     }
 
     function setMemoDiffDefaults(state, memo) {
@@ -704,6 +819,8 @@
       });
       var addBtn = document.getElementById('memoEvidenceUploadBtn');
       if (addBtn) addBtn.disabled = !!disabled;
+      var aiBtn = document.getElementById('memoEvidenceAiBtn');
+      if (aiBtn) aiBtn.disabled = !!disabled;
       var fileInput = document.getElementById('memoEvidenceFileInput');
       if (fileInput) fileInput.disabled = !!disabled;
       document.querySelectorAll('.memo-evidence-input, .memo-evidence-remove-btn').forEach(function(el) {
