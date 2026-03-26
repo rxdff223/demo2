@@ -903,6 +903,7 @@
       var rejectBtn = document.getElementById('memoBtnReject');
       var rejectReason = document.getElementById('memoRejectReason');
       var rejectReasonRow = document.getElementById('memoRejectReasonRow');
+      var actionHint = document.getElementById('memoActionHint');
       var selectedVersion = selectedMemo ? getMemoCurrentVersion(selectedMemo) : null;
       var confirmCount = selectedVersion ? getMemoConfirmCount(selectedVersion.confirmMeta) : 0;
       var perms = getMemoActionPermissions(selectedMemo);
@@ -948,6 +949,25 @@
       }
       if (rejectReasonRow) rejectReasonRow.classList.toggle('hidden', !perms.canReject);
       if (rejectReason) rejectReason.disabled = !perms.canReject;
+      if (actionHint) {
+        var hintText = '';
+        if (!selectedMemo) {
+          hintText = getCurrentMemoRoleKey() === 'investor'
+            ? '当前可新建备忘录并提交确认。'
+            : '当前角色仅可查看，等待投资方提交备忘录。';
+        } else if (perms.canSaveDraft || perms.canSubmitConfirm) {
+          hintText = '当前版本可编辑，可保存草稿或提交确认。';
+        } else if (perms.canConfirm || perms.canReject) {
+          hintText = '当前版本待确认，请按权限完成确认或拒绝。';
+        } else if (perms.roleConfirmed) {
+          hintText = '本方已确认，等待对方确认后生效。';
+        } else if (perms.canCreateRevision) {
+          hintText = '当前版本已确认，可基于当前版本生成修订稿。';
+        } else {
+          hintText = '当前版本仅可查看。';
+        }
+        actionHint.textContent = hintText;
+      }
 
       if (selectedMemo && !perms.canEdit && selectedMemo.status !== 'pending_confirmation') {
         updateMemoEditorHint('当前版本为「' + getMemoStatusMeta(selectedMemo.status).label + '」，当前角色仅可查看；如需改动请生成修订稿。');
@@ -1399,8 +1419,10 @@
               '<pre class="whitespace-pre-wrap text-sm text-gray-700 p-3 rounded-lg border border-gray-100 bg-gray-50">' + summary + '</pre>' +
             '</div>' +
             '<div class="border border-gray-100 rounded-lg p-3 bg-gray-50/60">' +
-              '<p class="text-xs font-semibold text-gray-600 mb-2">备忘录文件（' + evidences.length + '）</p>' +
-              '<div class="space-y-2">' + evidenceHtml + '</div>' +
+              '<details>' +
+                '<summary class="cursor-pointer text-xs font-semibold text-gray-600">备忘录文件（' + evidences.length + '）</summary>' +
+                '<div class="space-y-2 mt-2">' + evidenceHtml + '</div>' +
+              '</details>' +
             '</div>' +
           '</div>';
       }
@@ -1423,24 +1445,34 @@
                 '<button id="memoBtnReject" onclick="rejectSelectedMemo()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed">拒绝</button>' +
               '</div>' +
             '</div>' +
+            '<p id="memoActionHint" class="text-[11px] text-gray-400"></p>' +
           '</div>';
       }
 
       function buildMemoReadonlyInfo(version) {
         var rejectMeta = version && version.rejectMeta ? version.rejectMeta : null;
-        var rejectInfo = rejectMeta
-          ? ('<div class="mt-2 p-2.5 rounded-lg border border-rose-100 bg-rose-50 text-[11px] text-rose-700">拒绝原因：' + escapeMemoText(rejectMeta.reason || '--') + '<br>操作人：' + escapeMemoText(rejectMeta.actor || '--') + '（' + escapeMemoText(rejectMeta.role || '--') + '） · ' + escapeMemoText(fmtMemoTime(rejectMeta.at || '')) + '</div>')
-          : '';
         var confirmMeta = normalizeMemoConfirmMeta(version && version.confirmMeta);
         var confirmCount = getMemoConfirmCount(confirmMeta);
         var investorConfirm = confirmMeta.investor ? ((confirmMeta.investor.actor || '投资方') + ' @ ' + fmtMemoTime(confirmMeta.investor.at || '')) : '未确认';
         var financerConfirm = confirmMeta.financer ? ((confirmMeta.financer.actor || '融资方') + ' @ ' + fmtMemoTime(confirmMeta.financer.at || '')) : '未确认';
+        var rejectInfo = rejectMeta
+          ? (
+            '<details class="mt-2 p-2.5 rounded-lg border border-rose-100 bg-rose-50 text-[11px] text-rose-700">' +
+              '<summary class="cursor-pointer font-semibold">拒绝信息</summary>' +
+              '<p class="mt-1">拒绝原因：' + escapeMemoText(rejectMeta.reason || '--') + '</p>' +
+              '<p class="mt-1">操作人：' + escapeMemoText(rejectMeta.actor || '--') + '（' + escapeMemoText(rejectMeta.role || '--') + '） · ' + escapeMemoText(fmtMemoTime(rejectMeta.at || '')) + '</p>' +
+            '</details>'
+          )
+          : '';
         return '' +
-          '<div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-3 text-[11px]">' +
+          '<div class="grid grid-cols-1 md:grid-cols-1 gap-2 mt-3 text-[11px]">' +
             '<div class="p-2.5 rounded-lg border border-gray-100 bg-gray-50"><p class="text-gray-400 mb-1">确认进度</p><p class="font-semibold text-gray-700">' + confirmCount + '/2</p></div>' +
-            '<div class="p-2.5 rounded-lg border border-gray-100 bg-gray-50"><p class="text-gray-400 mb-1">投资方确认</p><p class="font-semibold text-gray-700">' + escapeMemoText(investorConfirm) + '</p></div>' +
-            '<div class="p-2.5 rounded-lg border border-gray-100 bg-gray-50"><p class="text-gray-400 mb-1">融资方确认</p><p class="font-semibold text-gray-700">' + escapeMemoText(financerConfirm) + '</p></div>' +
           '</div>' +
+          '<details class="mt-2 p-2.5 rounded-lg border border-gray-100 bg-gray-50 text-[11px] text-gray-600">' +
+            '<summary class="cursor-pointer font-semibold text-gray-700">确认轨迹</summary>' +
+            '<p class="mt-1">投资方：' + escapeMemoText(investorConfirm) + '</p>' +
+            '<p class="mt-1">融资方：' + escapeMemoText(financerConfirm) + '</p>' +
+          '</details>' +
           rejectInfo;
       }
 
@@ -1730,6 +1762,22 @@
       createMemoRevisionByBaseVersion(state, memo, baseVersion);
     }
 
+    function selectNextPendingMemo(state, excludeMemoId) {
+      if (!state || !Array.isArray(state.memos)) return null;
+      ensureMemoEditorState(state);
+      var pending = state.memos.filter(function(item) {
+        return item && item.status === 'pending_confirmation' && item.id !== excludeMemoId;
+      });
+      pending.sort(function(a, b) {
+        var aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        var bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return bTime - aTime;
+      });
+      if (!pending.length) return null;
+      state.memoEditor.selectedMemoId = pending[0].id;
+      return pending[0];
+    }
+
     function confirmSelectedMemo() {
       if (!currentDeal) return;
       var state = ensureNegotiationState();
@@ -1761,6 +1809,7 @@
       var confirmCount = getMemoConfirmCount(version.confirmMeta);
       memo.status = confirmCount >= 2 ? 'confirmed' : 'pending_confirmation';
       memo.updatedAt = now;
+      var nextPendingMemo = selectNextPendingMemo(state, memo.id);
       saveNegotiationState();
       if (memo.status === 'confirmed') {
         pushTimelineEvent('memo_confirmed', '完成双向确认（' + memo.id + ' · V' + memo.currentVersion + '）', getPublicTermsFromWorkbench());
@@ -1769,9 +1818,9 @@
       }
       renderMemoTab();
       if (memo.status === 'confirmed') {
-        showToast('success', '双方确认完成', memo.id + ' 已正式确认');
+        showToast('success', '双方确认完成', memo.id + ' 已正式确认' + (nextPendingMemo ? ('，已定位到 ' + nextPendingMemo.id) : ''));
       } else {
-        showToast('info', '已记录本方确认', memo.id + ' 当前确认进度 ' + confirmCount + '/2');
+        showToast('info', '已记录本方确认', memo.id + ' 当前确认进度 ' + confirmCount + '/2' + (nextPendingMemo ? ('，已定位到 ' + nextPendingMemo.id) : ''));
       }
     }
 
@@ -1810,10 +1859,11 @@
           reason: reason
         };
       }
+      var nextPendingMemo = selectNextPendingMemo(state, memo.id);
       saveNegotiationState();
       pushTimelineEvent('memo_rejected', '拒绝备忘录（' + memo.id + ' · V' + memo.currentVersion + '）', getPublicTermsFromWorkbench());
       renderMemoTab();
-      showToast('info', '已拒绝', memo.id + ' 已拒绝，原因已记录');
+      showToast('info', '已拒绝', memo.id + ' 已拒绝，原因已记录' + (nextPendingMemo ? ('，已定位到 ' + nextPendingMemo.id) : ''));
     }
 
     // ---- 方案动态时间线 ----
