@@ -590,6 +590,35 @@
         return;
       }
 
+      function normalizeDiffText(value) {
+        var text = String(value == null ? '' : value).replace(/\r\n?/g, '\n');
+        return text.trim() ? text : '（空）';
+      }
+
+      function renderDiffLine(prefix, line, type) {
+        var rowCls = type === 'add'
+          ? 'bg-emerald-50/70'
+          : type === 'del'
+            ? 'bg-rose-50/70'
+            : 'bg-transparent';
+        var prefixCls = type === 'add'
+          ? 'text-emerald-700'
+          : type === 'del'
+            ? 'text-rose-700'
+            : 'text-gray-400';
+        var textCls = type === 'add'
+          ? 'text-emerald-900'
+          : type === 'del'
+            ? 'text-rose-900'
+            : 'text-gray-700';
+        var safeLine = escapeMemoText(line);
+        if (!safeLine) safeLine = '&nbsp;';
+        return '<div class="flex items-start px-2 py-0.5 ' + rowCls + '">' +
+          '<span class="inline-block w-4 shrink-0 font-bold ' + prefixCls + '">' + prefix + '</span>' +
+          '<span class="break-words whitespace-pre-wrap font-mono text-[11px] leading-5 ' + textCls + '">' + safeLine + '</span>' +
+        '</div>';
+      }
+
       var fields = [
         { key: 'agreedContent', label: '达成内容', formatter: function(v) { return v || '无'; } },
         { key: 'summaryBody', label: '摘要正文', formatter: function(v) { return v || '无'; } }
@@ -598,18 +627,26 @@
       box.innerHTML = fields.map(function(field) {
         var aRaw = versionA[field.key];
         var bRaw = versionB[field.key];
-        var aVal = field.formatter(aRaw);
-        var bVal = field.formatter(bRaw);
+        var aVal = normalizeDiffText(field.formatter(aRaw));
+        var bVal = normalizeDiffText(field.formatter(bRaw));
         var changed = aVal !== bVal;
-        return '<div class="p-2.5 rounded-lg border ' + (changed ? 'border-cyan-200 bg-cyan-50/50' : 'border-gray-100 bg-gray-50') + '">' +
-          '<div class="flex items-center justify-between mb-1">' +
+        var aLines = aVal.split('\n');
+        var bLines = bVal.split('\n');
+        var diffLines = [];
+        diffLines.push('<div class="px-2 py-1 border-b border-gray-100 bg-slate-50 text-[10px] font-semibold text-slate-600">@@ ' + field.label + ' @@</div>');
+        if (changed) {
+          aLines.forEach(function(line) { diffLines.push(renderDiffLine('-', line, 'del')); });
+          bLines.forEach(function(line) { diffLines.push(renderDiffLine('+', line, 'add')); });
+        } else {
+          aLines.forEach(function(line) { diffLines.push(renderDiffLine(' ', line, 'ctx')); });
+        }
+        return '<div class="rounded-lg border ' + (changed ? 'border-cyan-200' : 'border-gray-200') + ' overflow-hidden bg-white">' +
+          '<div class="flex items-center justify-between px-3 py-2 border-b border-gray-100">' +
             '<span class="text-xs font-semibold text-gray-700">' + field.label + '</span>' +
             '<span class="text-[10px] px-1.5 py-0.5 rounded ' + (changed ? 'bg-cyan-100 text-cyan-700' : 'bg-gray-200 text-gray-600') + '">' + (changed ? '已修改' : '无变化') + '</span>' +
           '</div>' +
-          '<div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">' +
-            '<div class="p-2 rounded bg-white border border-gray-100"><p class="text-gray-400 mb-0.5">版本A</p><pre class="whitespace-pre-wrap text-gray-700">' + escapeMemoText(aVal) + '</pre></div>' +
-            '<div class="p-2 rounded bg-white border border-gray-100"><p class="text-gray-400 mb-0.5">版本B</p><pre class="whitespace-pre-wrap text-gray-700">' + escapeMemoText(bVal) + '</pre></div>' +
-          '</div>' +
+          '<div class="px-3 py-1.5 border-b border-gray-100 text-[10px] text-gray-500 bg-gray-50">V' + versionA.version + ' -> V' + versionB.version + '</div>' +
+          '<div class="font-mono">' + diffLines.join('') + '</div>' +
         '</div>';
       }).join('');
     }
