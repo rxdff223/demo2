@@ -1407,9 +1407,6 @@
       } else {
         showToast('info', '已记录本方确认', memo.id + ' 当前确认进度 ' + confirmCount + '/2');
       }
-      var timelineFilter = document.getElementById('timelineFilterType');
-      if (timelineFilter) timelineFilter.value = 'memo';
-      if (typeof switchSessionTab === 'function') switchSessionTab('timeline');
     }
 
     function rejectSelectedMemo() {
