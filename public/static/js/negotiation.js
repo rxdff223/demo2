@@ -600,7 +600,7 @@
       state.memoEditor.actionDraft[index][field] = value || '';
     }
 
-    function renderMemoActionBoard(memoVersion) {
+    function renderMemoActionBoard(memo, memoVersion) {
       var list = document.getElementById('memoActionBoardList');
       var stats = document.getElementById('memoActionBoardStats');
       if (!list || !stats) return;
@@ -611,7 +611,8 @@
       }
       var items = normalizeMemoActionItems(memoVersion.actionItems);
       var doneCount = items.filter(function(item) { return item.status === 'done'; }).length;
-      stats.textContent = '完成 ' + doneCount + '/' + items.length;
+      var versionLabel = (memo && memo.currentVersion) ? (' · V' + memo.currentVersion) : '';
+      stats.textContent = '完成 ' + doneCount + '/' + items.length + versionLabel;
       if (!items.length) {
         list.innerHTML = '当前版本暂无行动项。';
         return;
@@ -785,6 +786,8 @@
           : vStatus === 'draft' ? 'bg-gray-100 text-gray-600'
           : 'bg-indigo-100 text-indigo-700';
         var at = (v.updatedAt || v.createdAt || '').slice(0, 16).replace('T', ' ');
+        var versionActions = normalizeMemoActionItems(v.actionItems);
+        var actionDone = versionActions.filter(function(item) { return item.status === 'done'; }).length;
         var investorConfirm = confirmMeta.investor ? ((confirmMeta.investor.actor || '投资方') + ' @ ' + String(confirmMeta.investor.at || '').slice(0, 16).replace('T', ' ')) : '未确认';
         var financerConfirm = confirmMeta.financer ? ((confirmMeta.financer.actor || '融资方') + ' @ ' + String(confirmMeta.financer.at || '').slice(0, 16).replace('T', ' ')) : '未确认';
         return '<div class="p-2.5 rounded-lg border border-gray-100 bg-gray-50">' +
@@ -793,6 +796,7 @@
             '<span class="text-[10px] px-1.5 py-0.5 rounded ' + statusCls + '">' + statusLabel + '</span>' +
           '</div>' +
           '<p class="text-[11px] text-gray-500 mt-1">编辑人：' + (v.author || '--') + ' · 角色：' + (v.role || '--') + ' · 时间：' + at + '</p>' +
+          '<p class="text-[11px] text-gray-400 mt-1">行动项：' + actionDone + '/' + versionActions.length + ' 完成</p>' +
           '<p class="text-[11px] text-gray-400 mt-1">双向确认：' + confirmCount + '/2（投资方' + (confirmMeta.investor ? '已确认' : '未确认') + '，融资方' + (confirmMeta.financer ? '已确认' : '未确认') + '）</p>' +
           '<p class="text-[11px] text-gray-400 mt-1">投资方确认：' + escapeMemoText(investorConfirm) + '</p>' +
           '<p class="text-[11px] text-gray-400 mt-1">融资方确认：' + escapeMemoText(financerConfirm) + '</p>' +
@@ -1248,7 +1252,7 @@
         setMemoFormData({});
         updateMemoEditorHint('当前为新建模式。必填：议题、达成内容。');
         renderMemoActionBar(state, null);
-        renderMemoActionBoard(null);
+        renderMemoActionBoard(null, null);
         renderMemoVersionHistory(state, null);
         renderMemoFilterMeta({ allCount: 0, filteredCount: 0, statusFilter: 'all', keyword: '' });
         saveNegotiationState();
@@ -1272,7 +1276,11 @@
         var selected = state.memoEditor.selectedMemoId === m.id;
         var summary = (currentVersion && currentVersion.summaryBody) || (currentVersion && currentVersion.agreedContent) || '';
         var shortSummary = summary.length > 90 ? (summary.slice(0, 90) + '...') : summary;
-        var rejectReason = currentVersion && currentVersion.rejectMeta && currentVersion.rejectMeta.reason ? currentVersion.rejectMeta.reason : '';
+        var rejectMeta = currentVersion && currentVersion.rejectMeta ? currentVersion.rejectMeta : null;
+        var rejectReason = rejectMeta && rejectMeta.reason ? rejectMeta.reason : '';
+        var rejectRole = rejectMeta && rejectMeta.role ? rejectMeta.role : '';
+        var rejectActor = rejectMeta && rejectMeta.actor ? rejectMeta.actor : '';
+        var rejectAt = rejectMeta && rejectMeta.at ? String(rejectMeta.at).slice(0, 16).replace('T', ' ') : '';
         var evidences = normalizeMemoEvidenceAnchors(currentVersion && currentVersion.evidenceAnchors);
         var evidenceCount = evidences.length;
         var actionItems = normalizeMemoActionItems(currentVersion && currentVersion.actionItems);
@@ -1298,7 +1306,8 @@
           '</div>' +
           '<p class="text-xs text-gray-700 mb-1">议题：' + ((currentVersion && currentVersion.topic) || '--') + '</p>' +
           '<p class="text-xs text-gray-600 leading-relaxed">' + (shortSummary || '无摘要') + '</p>' +
-          (rejectReason ? '<p class="text-[11px] text-rose-600 mt-1">拒绝原因：' + rejectReason + '</p>' : '') +
+          (rejectReason ? '<p class="text-[11px] text-rose-600 mt-1">拒绝原因：' + escapeMemoText(rejectReason) + '</p>' : '') +
+          (rejectReason ? '<p class="text-[11px] text-rose-500 mt-1">拒绝信息：' + escapeMemoText(rejectActor || '--') + '（' + escapeMemoText(rejectRole || '--') + '） · ' + escapeMemoText(rejectAt || '--') + '</p>' : '') +
           evidenceDetails +
           actionDetails +
           '<div class="text-[10px] text-gray-400 mt-1.5 flex items-center justify-between">' +
@@ -1314,7 +1323,7 @@
         setMemoFormData({});
         updateMemoEditorHint('当前为新建模式。必填：议题、达成内容。');
         renderMemoActionBar(state, null);
-        renderMemoActionBoard(null);
+        renderMemoActionBoard(null, null);
         renderMemoVersionHistory(state, null);
         return;
       }
@@ -1328,7 +1337,7 @@
       if (selectedMemo.status === 'confirmed') selectedStatusLabel = '已确认（2/2）';
       updateMemoEditorHint('当前编辑：' + selectedMemo.id + ' · V' + selectedMemo.currentVersion + ' · ' + selectedStatusLabel + '。');
       renderMemoActionBar(state, selectedMemo);
-      renderMemoActionBoard(selectedVersion);
+      renderMemoActionBoard(selectedMemo, selectedVersion);
       renderMemoVersionHistory(state, selectedMemo);
     }
 
