@@ -760,63 +760,14 @@ export const MAIN_HTML = `
 
     <!-- Tab: 沟通备忘录 -->
     <div id="sessionTab-memo" class="hidden flex-1 overflow-y-auto p-5">
-      <div class="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
-        <div class="bg-white rounded-2xl border border-gray-100 p-5">
-          <h3 class="text-base font-bold text-gray-900 mb-2"><i class="fas fa-file-lines mr-2 text-indigo-600"></i>沟通备忘录</h3>
-          <p class="text-sm text-gray-500 mb-4">微信为主沟通，系统沉淀共识。请结构化记录并走确认流程。</p>
-          <p id="memoEditorHint" class="text-[11px] text-gray-400 mb-3">当前为新建模式。必填：议题。</p>
-          <div class="space-y-3">
-            <div>
-              <label class="block text-xs text-gray-500 mb-1">议题（必填）</label>
-              <input id="memoTopic" type="text" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="例如：分成比例上限确认">
-            </div>
-            <div>
-              <label class="block text-xs text-gray-500 mb-1">达成内容（选填）</label>
-              <textarea id="memoAgreedContent" rows="3" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="记录双方已达成的一致内容"></textarea>
-            </div>
-            <div>
-              <label class="block text-xs text-gray-500 mb-1">摘要正文（选填）</label>
-              <textarea id="memoSummaryBody" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="补充摘要或对外确认口径"></textarea>
-            </div>
-            <div class="border border-gray-100 rounded-lg p-3 bg-gray-50/50">
-              <div class="flex items-center justify-between mb-2">
-                <label class="block text-xs font-semibold text-gray-600">备忘录文件</label>
-                <div class="flex items-center gap-2">
-                  <button id="memoEvidenceUploadBtn" onclick="triggerMemoEvidenceUpload()" class="px-2 py-1 text-[11px] font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-white">上传文件</button>
-                  <button id="memoEvidenceAiBtn" onclick="recognizeMemoFilesToSummary()" class="px-2 py-1 text-[11px] font-semibold rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50">AI识别写入摘要</button>
-                </div>
-              </div>
-              <p class="text-[11px] text-gray-400 mb-2">支持多文件上传；文本类文件会自动识别内容，点击“AI识别写入摘要”可回填到摘要正文。</p>
-              <input id="memoEvidenceFileInput" type="file" class="hidden" multiple onchange="handleMemoEvidenceFiles(this.files)">
-              <div id="memoEvidenceList" class="space-y-2">
-                <p class="text-xs text-gray-400">暂无备忘录文件</p>
-              </div>
-            </div>
+      <div class="max-w-6xl mx-auto space-y-3">
+        <div class="bg-white rounded-2xl border border-gray-100 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="text-base font-bold text-gray-900"><i class="fas fa-file-lines mr-2 text-indigo-600"></i>沟通备忘录</h3>
+            <button id="memoBtnNewTop" onclick="clearMemoForm()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100">开始新记录</button>
           </div>
-          <div class="grid grid-cols-2 gap-2 mt-3">
-            <button id="memoBtnSaveDraft" onclick="saveMemoDraft()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed">保存草稿</button>
-            <button id="memoBtnSubmitConfirm" onclick="submitMemoForConfirmation()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">提交确认</button>
-          </div>
-          <div class="mt-2">
-            <button id="memoBtnNew" onclick="clearMemoForm()" class="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed">开始新记录</button>
-          </div>
-          <div class="mt-2">
-            <button id="memoBtnCreateRevision" onclick="createMemoRevision()" class="hidden w-full px-3 py-2 text-xs font-semibold rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 disabled:opacity-50 disabled:cursor-not-allowed">基于当前版本生成修订稿</button>
-          </div>
-          <div id="memoFinancerActions" class="hidden mt-3 space-y-2">
-            <div>
-              <label class="block text-xs text-gray-500 mb-1">拒绝原因（拒绝时必填）</label>
-              <input id="memoRejectReason" type="text" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="例如：达成内容描述不清晰，需要补充后再确认">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <button id="memoBtnConfirm" onclick="confirmSelectedMemo()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-600">确认</button>
-              <button id="memoBtnReject" onclick="rejectSelectedMemo()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-rose-600">拒绝</button>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white rounded-2xl border border-gray-100 p-5">
-          <div class="flex items-center justify-between gap-2 mb-3">
-            <h3 class="text-sm font-bold text-gray-800"><i class="fas fa-list mr-1.5 text-indigo-500"></i>历史纪要</h3>
+          <p id="memoEditorHint" class="text-[11px] text-gray-400 mt-2">统一视图：双方看到同一信息，按权限显示可执行动作。</p>
+          <div class="mt-3 flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
               <select id="memoFilterStatus" class="px-2 py-1 border border-gray-200 rounded text-xs bg-white" onchange="renderMemoTab()">
                 <option value="all">全部状态</option>
@@ -826,27 +777,12 @@ export const MAIN_HTML = `
                 <option value="rejected">已拒绝</option>
                 <option value="revised">已修订</option>
               </select>
-              <input id="memoSearchInput" type="text" class="px-2 py-1 border border-gray-200 rounded text-xs w-44" placeholder="搜索议题/摘要内容" oninput="renderMemoTab()">
+              <input id="memoSearchInput" type="text" class="px-2 py-1 border border-gray-200 rounded text-xs w-56" placeholder="搜索议题/摘要内容" oninput="renderMemoTab()">
             </div>
-          </div>
-          <p id="memoFilterMeta" class="text-[11px] text-gray-400 mb-2">默认按最近更新时间降序</p>
-          <div id="memoHistoryList" class="space-y-2 text-sm text-gray-600">暂无沟通纪要。</div>
-          <div class="mt-4 pt-4 border-t border-gray-100">
-            <h4 class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-clock-rotate-left mr-1.5 text-indigo-500"></i>版本历史</h4>
-            <div id="memoVersionHistory" class="space-y-2 text-sm text-gray-600">请选择一条备忘录查看版本历史。</div>
-          </div>
-          <div class="mt-4 pt-4 border-t border-gray-100">
-            <div class="flex items-center justify-between mb-2">
-              <h4 class="text-xs font-bold text-gray-700"><i class="fas fa-code-compare mr-1.5 text-cyan-500"></i>字段差异对比</h4>
-              <div class="flex items-center gap-1.5 text-[11px]">
-                <select id="memoDiffVersionA" class="px-2 py-1 border border-gray-200 rounded bg-white" onchange="updateMemoDiffSelection('A', this.value)"></select>
-                <span class="text-gray-400">vs</span>
-                <select id="memoDiffVersionB" class="px-2 py-1 border border-gray-200 rounded bg-white" onchange="updateMemoDiffSelection('B', this.value)"></select>
-              </div>
-            </div>
-            <div id="memoDiffBox" class="space-y-2 text-sm text-gray-600">请选择两个版本进行对比。</div>
+            <p id="memoFilterMeta" class="text-[11px] text-gray-400">默认排序：待确认优先 + 更新时间倒序</p>
           </div>
         </div>
+        <div id="memoHistoryList" class="space-y-3 text-sm text-gray-600">暂无沟通纪要。</div>
       </div>
     </div>
 
