@@ -139,6 +139,29 @@
       return true;
     }
 
+    function syncOriginateDefaultRevenue(state) {
+      if (!state || !currentDeal || !Array.isArray(state.proposals)) return;
+      var wbState = (typeof workbenchByDeal !== 'undefined' && workbenchByDeal[currentDeal.id]) || null;
+      var revenueWan = 0;
+      if (wbState && wbState.privateRevenueWan > 0) {
+        revenueWan = wbState.privateRevenueWan;
+      } else if (typeof getForecastValueBySource === 'function') {
+        var src = (wbState && wbState.privateSource) || 'system';
+        revenueWan = getForecastValueBySource(src);
+      }
+      if (revenueWan <= 0) return;
+      state.proposals.forEach(function(p) {
+        if (p && p.sourceType === 'originate_default') {
+          var old = p.privateData && p.privateData.revenueWan;
+          if (old !== +revenueWan.toFixed(1)) {
+            p.privateData = p.privateData || {};
+            p.privateData.revenueWan = +revenueWan.toFixed(1);
+            p.derivedData = computeProposalDerivedSnapshot(p.publicTerms, revenueWan);
+          }
+        }
+      });
+    }
+
     function ensureNegotiationState() {
       if (!currentDeal) return null;
       const dealId = currentDeal.id;
@@ -472,7 +495,10 @@
               '<p class="text-[11px] mt-1"><span class="px-1.5 py-0.5 rounded ' + meta.cls + '">' + meta.label + '</span></p>' +
               (preview ? '<p class="text-[11px] text-gray-500 mt-1">识别预览：' + escapeMemoText(preview) + '</p>' : '') +
             '</div>' +
-            '<button class="memo-evidence-remove-btn shrink-0 px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="removeMemoEvidenceItem(' + idx + ')">删除</button>' +
+            '<div class="shrink-0 flex gap-1">' +
+              '<button class="px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="downloadMemoEvidenceDraft(' + idx + ')"><i class="fas fa-download"></i></button>' +
+              '<button class="memo-evidence-remove-btn px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-600 hover:bg-gray-50" onclick="removeMemoEvidenceItem(' + idx + ')">删除</button>' +
+            '</div>' +
           '</div>' +
           '<div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">' +
             '<div>' +
@@ -494,6 +520,67 @@
           '</div>' +
         '</div>';
       }).join('');
+    }
+
+    function downloadMemoEvidenceDraft(idx) {
+      if (!currentDeal) return;
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      var items = normalizeMemoEvidenceAnchors(state.memoEditor.evidenceDraft);
+      var ev = items[idx];
+      if (!ev) { showToast('warning', '文件不存在', '找不到指定文件'); return; }
+      if (ev.dataUrl) {
+        var a = document.createElement('a');
+        a.href = ev.dataUrl;
+        a.download = ev.fileName || '未命名文件';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        var content = ev.recognizedText || ev.fileName || '';
+        var blob = new Blob([content], { type: ev.mimeType || 'application/octet-stream' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = ev.fileName || '未命名文件';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+      showToast('success', '下载已开始', ev.fileName || '未命名文件');
+    }
+
+    function downloadMemoEvidence(idx) {
+      if (!currentDeal) return;
+      var state = ensureNegotiationState();
+      var memo = getSelectedMemo(state);
+      if (!memo) return;
+      var version = getMemoCurrentVersion(memo);
+      var evidences = normalizeMemoEvidenceAnchors(version && version.evidenceAnchors);
+      var ev = evidences[idx];
+      if (!ev) { showToast('warning', '文件不存在', '找不到指定文件'); return; }
+      if (ev.dataUrl) {
+        var a = document.createElement('a');
+        a.href = ev.dataUrl;
+        a.download = ev.fileName || '未命名文件';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        var content = ev.recognizedText || ev.fileName || '';
+        var blob = new Blob([content], { type: ev.mimeType || 'application/octet-stream' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = ev.fileName || '未命名文件';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+      showToast('success', '下载已开始', ev.fileName || '未命名文件');
     }
 
     function formatMemoFileSize(bytes) {
@@ -686,23 +773,17 @@
     }
 
     function renderMemoDiffSelectors(state, memo) {
-      var aSel = document.getElementById('memoDiffVersionA');
-      var bSel = document.getElementById('memoDiffVersionB');
-      if (!aSel || !bSel) return;
+      var label = document.getElementById('memoDiffCompareLabel');
       if (!memo) {
-        aSel.innerHTML = '<option value="">版本A</option>';
-        bSel.innerHTML = '<option value="">版本B</option>';
+        if (label) label.textContent = '';
         return;
       }
       setMemoDiffDefaults(state, memo);
-      var versions = getMemoVersionsDesc(memo);
-      var options = versions.map(function(v) {
-        return '<option value="' + v.version + '">V' + v.version + '</option>';
-      }).join('');
-      aSel.innerHTML = options;
-      bSel.innerHTML = options;
-      aSel.value = state.memoEditor.diffVersionA;
-      bSel.value = state.memoEditor.diffVersionB;
+      if (label) {
+        var vA = state.memoEditor.diffVersionA;
+        var vB = state.memoEditor.diffVersionB;
+        label.textContent = vA && vB ? ('V' + vA + ' vs V' + vB) : '';
+      }
     }
 
     function renderMemoDiff(versionA, versionB) {
@@ -801,11 +882,11 @@
         if (diffToggleLabel) diffToggleLabel.textContent = isOpen ? '收起' : '展开';
       }
 
-      function setMemoDiffVisible(visible) {
+      function setMemoDiffVisible(visible, forceCollapsed) {
         var show = !!visible;
         if (diffSection) diffSection.classList.toggle('hidden', !show);
         if (!show) return;
-        var shouldOpen = state.memoEditor.diffExpanded !== false;
+        var shouldOpen = forceCollapsed ? false : (state.memoEditor.diffExpanded !== false);
         if (diffDetails && diffDetails.open !== shouldOpen) {
           diffDetails.open = shouldOpen;
         }
@@ -864,15 +945,15 @@
           '<p class="text-[11px] text-gray-400 mt-1">投资方确认：' + escapeMemoText(investorConfirm) + '</p>' +
           '<p class="text-[11px] text-gray-400 mt-1">融资方确认：' + escapeMemoText(financerConfirm) + '</p>' +
           '<div class="mt-1.5 flex items-center gap-2">' +
-            (canCompareVersions ? '<button onclick="updateMemoDiffSelection(&quot;A&quot;, &quot;' + v.version + '&quot;)" class="px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-700 hover:bg-white">设为版本A</button>' : '') +
-            (canCompareVersions ? '<button onclick="updateMemoDiffSelection(&quot;B&quot;, &quot;' + v.version + '&quot;)" class="px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-700 hover:bg-white">设为版本B</button>' : '') +
+            (canCompareVersions && !isCurrent ? '<button onclick="compareMemoVersionWithLatest(' + v.version + ')" class="px-2 py-1 text-[11px] rounded border border-gray-200 text-gray-700 hover:bg-white">用此版本与最新版本对比</button>' : '') +
             (perms.canCreateRevision ? ('<button onclick="createMemoRevisionFromVersion(' + v.version + ')" class="px-2 py-1 text-[11px] rounded border border-cyan-200 text-cyan-700 hover:bg-cyan-50">基于此版本新建草稿</button>') : '') +
           '</div>' +
         '</div>';
       }).join('');
 
       var canShowDiff = canCompareVersions;
-      setMemoDiffVisible(canShowDiff);
+      var isConfirmed = memo.status === 'confirmed';
+      setMemoDiffVisible(canShowDiff, isConfirmed);
       if (!canShowDiff) {
         renderMemoDiffSelectors(state, null);
         var singleVersionDiffBox = document.getElementById('memoDiffBox');
@@ -906,6 +987,21 @@
       else state.memoEditor.diffVersionB = String(versionNo || '');
       saveNegotiationState();
       renderMemoTab();
+    }
+
+    function compareMemoVersionWithLatest(versionNo) {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      var memo = getSelectedMemo(state);
+      if (!memo) return;
+      ensureMemoEditorState(state);
+      state.memoEditor.diffVersionA = String(versionNo);
+      state.memoEditor.diffVersionB = String(memo.currentVersion);
+      state.memoEditor.diffExpanded = true;
+      saveNegotiationState();
+      renderMemoTab();
+      var diffDetails = document.getElementById('memoDiffDetails');
+      if (diffDetails && !diffDetails.open) diffDetails.open = true;
     }
 
     function updateMemoEditorHint(text) {
@@ -984,6 +1080,7 @@
         canSubmitConfirm: false,
         canConfirm: false,
         canReject: false,
+        canWithdraw: false,
         canCreateRevision: false,
         roleConfirmed: roleConfirmed
       };
@@ -1000,13 +1097,15 @@
         return perms;
       }
       if (memo.status === 'pending_confirmation') {
+        var isSubmitter = !isCounterpartyOnPending;
         perms.canConfirm = isCounterpartyOnPending && !roleConfirmed;
-        perms.canReject = !roleConfirmed;
+        perms.canReject = isCounterpartyOnPending && !roleConfirmed;
+        perms.canWithdraw = isSubmitter;
         perms.canCreateRevision = isCounterpartyOnPending && !roleConfirmed;
         return perms;
       }
       if (memo.status === 'confirmed') {
-        perms.canCreateRevision = true;
+        perms.canCreateRevision = false;
       }
       return perms;
     }
@@ -1062,7 +1161,7 @@
       var confirmCount = selectedVersion ? getMemoConfirmCount(selectedVersion.confirmMeta) : 0;
       var perms = getMemoActionPermissions(selectedMemo);
       var lastAction = (state && state.memoEditor && state.memoEditor.lastPrimaryAction) || '';
-      var canShowConfirmArea = perms.canConfirm || perms.canReject || (!!selectedMemo && selectedMemo.status === 'pending_confirmation');
+      var canShowConfirmArea = perms.canConfirm || perms.canReject || perms.canWithdraw || (!!selectedMemo && selectedMemo.status === 'pending_confirmation');
 
       setMemoFormDisabled(!perms.canEdit);
 
@@ -1102,6 +1201,12 @@
         rejectBtn.classList.toggle('hidden', !showRejectBtn);
         rejectBtn.disabled = !showRejectBtn;
       }
+      var withdrawBtn = document.getElementById('memoBtnWithdraw');
+      var showWithdrawBtn = !!perms.canWithdraw;
+      if (withdrawBtn) {
+        withdrawBtn.classList.toggle('hidden', !showWithdrawBtn);
+        withdrawBtn.disabled = !showWithdrawBtn;
+      }
       var showModifyBtn = !!selectedMemo && selectedMemo.status === 'pending_confirmation' && !!perms.canCreateRevision;
       if (modifyBtn) {
         modifyBtn.classList.toggle('hidden', !showModifyBtn);
@@ -1109,7 +1214,7 @@
       }
       if (confirmActionsRow) {
         var showConfirmBtn = !!(confirmBtn && (!(!perms.canConfirm && !perms.roleConfirmed)));
-        var visibleActionCount = (showConfirmBtn ? 1 : 0) + (showRejectBtn ? 1 : 0) + (showModifyBtn ? 1 : 0);
+        var visibleActionCount = (showConfirmBtn ? 1 : 0) + (showRejectBtn ? 1 : 0) + (showWithdrawBtn ? 1 : 0) + (showModifyBtn ? 1 : 0);
         confirmActionsRow.classList.toggle('grid-cols-3', visibleActionCount >= 3);
         confirmActionsRow.classList.toggle('grid-cols-2', visibleActionCount === 2);
         confirmActionsRow.classList.toggle('grid-cols-1', visibleActionCount <= 1);
@@ -1120,6 +1225,8 @@
           hintText = '当前可新建备忘录并提交确认。';
         } else if (perms.canSaveDraft || perms.canSubmitConfirm) {
           hintText = '当前版本可编辑，可保存草稿或提交确认。';
+        } else if (perms.canWithdraw) {
+          hintText = '当前版本已提交待对方确认，如需修改可撤回。';
         } else if (perms.canConfirm || perms.canReject || showModifyBtn) {
           hintText = '当前版本待确认，请按权限完成确认、拒绝或修改。';
         } else if (perms.roleConfirmed) {
@@ -1289,24 +1396,9 @@
         pdCell('实际APR', fmtPctOrDash(d.actualAprPct)) +
         pdCell('回收倍数', Number.isFinite(d.recoveryMultiple) ? d.recoveryMultiple.toFixed(2) + 'x' : '--');
 
-      // 编辑区：仅方案发起方视角可编辑
+      // 编辑区：已废弃，方案提出方只能撤回后重新提交
       var editSection = document.getElementById('pdEditSection');
-      var canEdit = (p.perspective === (currentPerspective || 'investor')) && (p.status === 'draft' || p.status === 'pending');
-      if (editSection) {
-        editSection.classList.toggle('hidden', !canEdit);
-        if (canEdit) {
-          var ea = document.getElementById('pdEditAmount');
-          var es = document.getElementById('pdEditShare');
-          var ep = document.getElementById('pdEditApr');
-          var et = document.getElementById('pdEditTerm');
-          if (ea) ea.value = t.amountWan || '';
-          if (es) es.value = t.sharePct || '';
-          if (ep) ep.value = t.aprPct || '';
-          if (et) et.value = t.termMonths || '';
-          var saveBtn = document.getElementById('pdSaveEditBtn');
-          if (saveBtn) saveBtn.onclick = function() { saveProposalEdit(proposalId); };
-        }
-      }
+      if (editSection) editSection.classList.add('hidden');
 
       // 沟通消息
       renderProposalMessages(p);
@@ -1559,12 +1651,17 @@
           ? evidences.map(function(ev, i) {
               var when = (ev.sourceAt || ev.uploadedAt) ? fmtMemoTime(ev.sourceAt || ev.uploadedAt) : '--';
               return '<div class="p-2 rounded bg-gray-50 border border-gray-100 text-[11px] text-gray-600">' +
-                '<span class="font-medium text-gray-700">#' + (i + 1) + '</span> ' + escapeMemoText(ev.fileName || '未命名文件') +
-                ' · ' + escapeMemoText(formatMemoFileSize(ev.fileSize)) +
-                ' · ' + escapeMemoText(ev.mimeType || '--') +
-                ' · 来源：' + escapeMemoText(ev.sourceRole || '--') +
-                ' · ' + escapeMemoText(when) +
-                (ev.note ? ('<br><span class="text-gray-400">' + escapeMemoText(ev.note) + '</span>') : '') +
+                '<div class="flex items-start justify-between gap-2">' +
+                  '<div class="min-w-0">' +
+                    '<span class="font-medium text-gray-700">#' + (i + 1) + '</span> ' + escapeMemoText(ev.fileName || '未命名文件') +
+                    ' · ' + escapeMemoText(formatMemoFileSize(ev.fileSize)) +
+                    ' · ' + escapeMemoText(ev.mimeType || '--') +
+                    ' · 来源：' + escapeMemoText(ev.sourceRole || '--') +
+                    ' · ' + escapeMemoText(when) +
+                    (ev.note ? ('<br><span class="text-gray-400">' + escapeMemoText(ev.note) + '</span>') : '') +
+                  '</div>' +
+                  '<button onclick="downloadMemoEvidence(' + i + ')" class="shrink-0 px-2 py-0.5 text-[10px] rounded border border-gray-200 text-gray-600 hover:bg-white"><i class="fas fa-download mr-0.5"></i>下载</button>' +
+                '</div>' +
               '</div>';
             }).join('')
           : '<p class="text-xs text-gray-400">暂无备忘录文件</p>';
@@ -1598,8 +1695,9 @@
             '<div id="memoFinancerActions" class="hidden space-y-2">' +
               '<div id="memoConfirmActionsRow" class="grid grid-cols-2 gap-2">' +
                 '<button id="memoBtnConfirm" onclick="confirmSelectedMemo()" class="w-full px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">确认</button>' +
-                '<button id="memoBtnReject" onclick="openMemoRejectModal()" class="w-full px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed">拒绝</button>' +
-                '<button id="memoBtnModifyPending" onclick="createMemoRevision()" class="hidden w-full px-3 py-2 text-xs font-semibold rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 disabled:opacity-40 disabled:cursor-not-allowed">修改</button>' +
+                '<button id="memoBtnModifyPending" onclick="enterMemoModifyMode()" class="hidden w-full px-3 py-2 text-xs font-semibold rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 disabled:opacity-40 disabled:cursor-not-allowed">修改</button>' +
+                '<button id="memoBtnWithdraw" onclick="withdrawSelectedMemo()" class="hidden w-full px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">撤回</button>' +
+                '<button id="memoBtnReject" onclick="openMemoRejectModal()" class="hidden w-full px-2 py-1.5 text-[11px] rounded-lg text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed">拒绝</button>' +
               '</div>' +
             '</div>' +
             '<p id="memoActionHint" class="text-[11px] text-gray-400"></p>' +
@@ -1635,28 +1733,24 @@
 
       function buildMemoVersionAndDiffPanels() {
         return '' +
-          '<div class="mt-4 pt-4 border-t border-gray-100">' +
-            '<h4 class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-clock-rotate-left mr-1.5 text-indigo-500"></i>版本历史</h4>' +
-            '<div id="memoVersionHistory" class="space-y-2 text-sm text-gray-600">请选择一条备忘录查看版本历史。</div>' +
-          '</div>' +
           '<div id="memoDiffSection" class="mt-4 pt-4 border-t border-gray-100">' +
             '<details id="memoDiffDetails" class="group" ontoggle="onMemoDiffToggle(this.open)">' +
               '<summary class="list-none cursor-pointer flex items-center justify-between gap-2">' +
-                '<h4 class="text-xs font-bold text-gray-700"><i class="fas fa-code-compare mr-1.5 text-cyan-500"></i>字段差异对比</h4>' +
+                '<h4 class="text-xs font-bold text-gray-700"><i class="fas fa-code-compare mr-1.5 text-cyan-500"></i>备忘录版本对比</h4>' +
                 '<div class="flex items-center gap-1.5 text-[11px] text-gray-500">' +
+                  '<span id="memoDiffCompareLabel" class="text-gray-400"></span>' +
                   '<span id="memoDiffToggleLabel">收起</span>' +
                   '<i id="memoDiffChevron" class="fas fa-chevron-up transition-transform"></i>' +
                 '</div>' +
               '</summary>' +
               '<div class="mt-2">' +
-                '<div class="flex items-center gap-1.5 text-[11px] mb-2">' +
-                  '<select id="memoDiffVersionA" class="px-2 py-1 border border-gray-200 rounded bg-white" onchange="updateMemoDiffSelection(&quot;A&quot;, this.value)"></select>' +
-                  '<span class="text-gray-400">vs</span>' +
-                  '<select id="memoDiffVersionB" class="px-2 py-1 border border-gray-200 rounded bg-white" onchange="updateMemoDiffSelection(&quot;B&quot;, this.value)"></select>' +
-                '</div>' +
-                '<div id="memoDiffBox" class="space-y-2 text-sm text-gray-600">请选择两个版本进行对比。</div>' +
+                '<div id="memoDiffBox" class="space-y-2 text-sm text-gray-600">默认对比最新两个版本。</div>' +
               '</div>' +
             '</details>' +
+          '</div>' +
+          '<div class="mt-4 pt-4 border-t border-gray-100">' +
+            '<h4 class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-clock-rotate-left mr-1.5 text-indigo-500"></i>版本历史</h4>' +
+            '<div id="memoVersionHistory" class="space-y-2 text-sm text-gray-600">请选择一条备忘录查看版本历史。</div>' +
           '</div>';
       }
 
@@ -1697,7 +1791,7 @@
             (expanded
               ? ('<div class="px-4 pb-4 border-t border-gray-100">' +
                   buildMemoReadonlyInfo(version) +
-                  (perms.canEdit ? buildMemoEditorBlock() : buildMemoReadonlyContent(version)) +
+                  ((perms.canEdit || (state.memoEditor && state.memoEditor.modifyingPendingMemo && memo.status === 'pending_confirmation')) ? buildMemoEditorBlock() : buildMemoReadonlyContent(version)) +
                   buildMemoActionBlock() +
                   buildMemoVersionAndDiffPanels() +
                 '</div>')
@@ -1802,17 +1896,22 @@
         };
         state.memos.unshift(memo);
       } else {
-        if (!canEditMemoByRole(memo)) {
-          showToast('warning', '当前版本不可直接编辑', '请先点击「基于当前版本生成修订稿」');
+        var isModifyingPending = !!(state.memoEditor && state.memoEditor.modifyingPendingMemo) && memo.status === 'pending_confirmation';
+        if (!canEditMemoByRole(memo) && !isModifyingPending) {
+          showToast('warning', '当前版本不可直接编辑', '请先点击「修改」');
           return null;
         }
         currentVersion = getMemoCurrentVersion(memo);
-        var canUpdateCurrentDraft = memo.status === 'draft' && !!currentVersion;
+        var canUpdateCurrentDraft = memo.status === 'draft' && !!currentVersion && !isModifyingPending;
         if (!canUpdateCurrentDraft) {
           memo.currentVersion = (memo.currentVersion || 0) + 1;
         }
         memo.status = targetStatus;
         memo.updatedAt = now;
+        if (isModifyingPending) {
+          state.memoEditor.modifyingPendingMemo = false;
+          currentVersion = null;
+        }
       }
 
       if (!currentVersion || currentVersion.version !== memo.currentVersion) {
@@ -1864,6 +1963,32 @@
       pushTimelineEvent('memo_submitted', '提交沟通备忘录待确认（' + memo.id + '）', getPublicTermsFromWorkbench());
       renderMemoTab();
       showToast('success', '已提交确认', memo.id + ' 已进入待确认状态');
+    }
+
+    function enterMemoModifyMode() {
+      if (!currentDeal) return;
+      var state = ensureNegotiationState();
+      if (!state) return;
+      var memo = getSelectedMemo(state);
+      if (!memo || memo.status !== 'pending_confirmation') return;
+      ensureMemoEditorState(state);
+      state.memoEditor.modifyingPendingMemo = true;
+      saveNegotiationState();
+      renderMemoTab();
+      var version = getMemoCurrentVersion(memo);
+      if (version) {
+        setMemoFormData(version);
+      }
+      setMemoFormDisabled(false);
+      var saveBtn = document.getElementById('memoBtnSaveDraft');
+      var submitBtn = document.getElementById('memoBtnSubmitConfirm');
+      if (saveBtn) { saveBtn.classList.remove('hidden'); saveBtn.disabled = false; }
+      if (submitBtn) { submitBtn.classList.remove('hidden'); submitBtn.disabled = false; }
+      var financerActions = document.getElementById('memoFinancerActions');
+      if (financerActions) financerActions.classList.add('hidden');
+      var actionHint = document.getElementById('memoActionHint');
+      if (actionHint) actionHint.textContent = '正在修改备忘录，编辑后点击提交确认将生成新版本。';
+      showToast('info', '进入修改模式', '编辑内容后点击提交确认，将生成新版本');
     }
 
     function createMemoRevision() {
@@ -2078,6 +2203,38 @@
       showToast('info', '已拒绝', memo.id + ' 已拒绝，原因已记录' + (nextPendingMemo ? ('，已定位到 ' + nextPendingMemo.id) : ''));
     }
 
+    function withdrawSelectedMemo() {
+      if (!currentDeal) return;
+      var state = ensureNegotiationState();
+      if (!state) return;
+      var memo = getSelectedMemo(state);
+      if (!memo) {
+        showToast('warning', '未选择备忘录', '请选择一条备忘录');
+        return;
+      }
+      if (memo.status !== 'pending_confirmation') {
+        showToast('info', '当前状态不可撤回', '仅待确认状态可执行撤回');
+        return;
+      }
+      var perms = getMemoActionPermissions(memo);
+      if (!perms.canWithdraw) {
+        showToast('info', '无法撤回', '仅提交方可撤回自己提交的备忘录');
+        return;
+      }
+      var version = getMemoCurrentVersion(memo);
+      var now = new Date().toISOString();
+      memo.status = 'draft';
+      memo.updatedAt = now;
+      if (version) {
+        version.confirmMeta = {};
+        version.rejectMeta = null;
+      }
+      saveNegotiationState();
+      pushTimelineEvent('memo_withdrawn', '撤回备忘录（' + memo.id + ' · V' + memo.currentVersion + '）', getPublicTermsFromWorkbench());
+      renderMemoTab();
+      showToast('info', '已撤回', memo.id + ' 已撤回为草稿，可重新编辑后提交');
+    }
+
     // ---- 方案动态时间线 ----
     function getNegTimelineIcon(type) {
       var map = {
@@ -2092,6 +2249,7 @@
         counter_rejected: { icon: 'fa-ban', color: '#ef4444' },
         terms_confirmed: { icon: 'fa-lock', color: '#059669' },
         terms_revoked: { icon: 'fa-lock-open', color: '#dc2626' },
+        memo_withdrawn: { icon: 'fa-undo', color: '#6b7280' },
         timeline_reloaded: { icon: 'fa-rotate', color: '#8b5cf6' }
       };
       return map[type] || { icon: 'fa-circle', color: '#9ca3af' };
@@ -2196,6 +2354,7 @@
     function renderNegotiationTab() {
       if (!currentDeal) return;
       var state = ensureNegotiationState();
+      syncOriginateDefaultRevenue(state);
       var intent = (typeof ensureIntentState === 'function') ? ensureIntentState() : null;
 
       var gate = document.getElementById('negotiationGateTip');
@@ -2596,6 +2755,7 @@
         memo_confirm_progress: { label: '单方确认进度', category: 'memo' },
         memo_confirmed: { label: '备忘录已确认', category: 'memo' },
         memo_rejected: { label: '备忘录已拒绝', category: 'memo' },
+        memo_withdrawn: { label: '备忘录已撤回', category: 'memo' },
         memo_revised: { label: '备忘录已修订', category: 'memo' },
         invite_created: { label: '创建邀请', category: 'invite' }
       };
