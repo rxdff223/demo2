@@ -902,7 +902,7 @@
       }
       if (memo.status === 'pending_confirmation') {
         perms.canConfirm = isCounterpartyOnPending && !roleConfirmed;
-        perms.canReject = !roleConfirmed;
+        perms.canReject = true;
         perms.canCreateRevision = isCounterpartyOnPending && !roleConfirmed;
         return perms;
       }
