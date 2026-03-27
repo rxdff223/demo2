@@ -1397,16 +1397,16 @@
         pdCell('来源', privSourceText);
 
       // 派生指标
-      var d = p.derivedData || {};
+      var d = selectedForecast ? computeProposalDerivedSnapshot(p.publicTerms || {}, selectedForecast.value) : null;
       var derEl = document.getElementById('pdDerived');
       if (derEl) derEl.innerHTML =
-        pdCell('月回款', fmtWanOrDash(d.monthlyPaybackWan)) +
-        pdCell('建议融资上限', fmtWanOrDash(d.suggestedAmountWan)) +
-        pdCell('建议分成比例', fmtPctOrDash(d.suggestedSharePct)) +
-        pdCell('触达月数', fmtMonOrDash(d.touchMonths)) +
-        pdCell('总回款', fmtWanOrDash(d.totalPaybackWan)) +
-        pdCell('实际APR', fmtPctOrDash(d.actualAprPct)) +
-        pdCell('回收倍数', Number.isFinite(d.recoveryMultiple) ? d.recoveryMultiple.toFixed(2) + 'x' : '--');
+        pdCell('月回款', d ? fmtWanOrDash(d.monthlyPaybackWan) : '') +
+        pdCell('建议融资上限', d ? fmtWanOrDash(d.suggestedAmountWan) : '') +
+        pdCell('建议分成比例', d ? fmtPctOrDash(d.suggestedSharePct) : '') +
+        pdCell('触达月数', d ? fmtMonOrDash(d.touchMonths) : '') +
+        pdCell('总回款', d ? fmtWanOrDash(d.totalPaybackWan) : '') +
+        pdCell('实际APR', d ? fmtPctOrDash(d.actualAprPct) : '') +
+        pdCell('回收倍数', (d && Number.isFinite(d.recoveryMultiple)) ? d.recoveryMultiple.toFixed(2) + 'x' : '');
 
       // 编辑区：已废弃，方案提出方只能撤回后重新提交
       var editSection = document.getElementById('pdEditSection');
