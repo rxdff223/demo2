@@ -1558,15 +1558,16 @@
         var evidencePreview = evidences.slice(0, 3).map(function(item) {
           return escapeMemoText(item.fileName || '未命名文件');
         }).join(' / ');
-        var summary = (version && (version.summaryBody || version.agreedContent || version.topic)) || '无摘要';
-        if (summary.length > 120) summary = summary.slice(0, 120) + '...';
+        var topicText = (version && version.topic) || '--';
+        var detailText = (version && (version.summaryBody || version.agreedContent)) || '暂无具体内容';
+        if (detailText.length > 120) detailText = detailText.slice(0, 120) + '...';
         return '' +
           '<div class="bg-white rounded-2xl border ' + (expanded ? 'border-indigo-300' : 'border-gray-100') + ' overflow-hidden">' +
             '<div class="p-4 cursor-pointer hover:bg-gray-50 transition-colors" onclick="selectMemoForEdit(\'' + memo.id + '\')">' +
               '<div class="flex items-center justify-between gap-2">' +
                 '<div class="min-w-0">' +
-                  '<p class="text-sm font-semibold text-gray-800 truncate">纪要 ' + memo.id + ' · V' + memo.currentVersion + '</p>' +
-                  '<p class="text-[11px] text-gray-500 mt-0.5 truncate">议题：' + escapeMemoText((version && version.topic) || '--') + '</p>' +
+                  '<p class="text-sm font-semibold text-gray-800 truncate">议题：' + escapeMemoText(topicText) + '</p>' +
+                  '<p class="text-[11px] text-gray-500 mt-0.5 truncate">具体内容：' + escapeMemoText(detailText) + '</p>' +
                 '</div>' +
                 '<div class="flex items-center gap-1.5 shrink-0">' +
                   '<span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700">进度 ' + confirmCount + '/2</span>' +
@@ -1575,7 +1576,7 @@
                 '</div>' +
               '</div>' +
               '<div class="mt-2 flex items-center justify-between text-[11px] text-gray-400 gap-2">' +
-                '<span class="truncate">' + escapeMemoText(summary) + '</span>' +
+                '<span class="truncate">V' + memo.currentVersion + ' · ' + escapeMemoText(memo.id) + '</span>' +
                 '<span class="shrink-0">' + fmtMemoTime(memo.updatedAt || memo.createdAt || (version && version.updatedAt)) + '</span>' +
               '</div>' +
               '<p class="mt-1 text-[11px] text-gray-400">备忘录文件：' + evidenceCount + (evidencePreview ? ('（' + evidencePreview + '）') : '') + '</p>' +
