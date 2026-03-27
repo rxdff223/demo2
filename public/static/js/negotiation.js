@@ -70,7 +70,8 @@
           evidenceDraft: [],
           lastPrimaryAction: '',
           diffVersionA: '',
-          diffVersionB: ''
+          diffVersionB: '',
+          diffExpanded: true
         };
       }
       if (typeof state.memoEditor.selectedMemoId !== 'string') {
@@ -87,6 +88,9 @@
       }
       if (typeof state.memoEditor.diffVersionB !== 'string') {
         state.memoEditor.diffVersionB = '';
+      }
+      if (typeof state.memoEditor.diffExpanded !== 'boolean') {
+        state.memoEditor.diffExpanded = true;
       }
       if (typeof state.memoEditor.dismissNewRecord !== 'boolean') {
         state.memoEditor.dismissNewRecord = false;
@@ -685,9 +689,33 @@
 
     function renderMemoVersionHistory(state, memo) {
       var history = document.getElementById('memoVersionHistory');
+      var diffSection = document.getElementById('memoDiffSection');
+      var diffDetails = document.getElementById('memoDiffDetails');
+      var diffChevron = document.getElementById('memoDiffChevron');
+      var diffToggleLabel = document.getElementById('memoDiffToggleLabel');
       if (!history) return;
+      ensureMemoEditorState(state);
+
+      function syncMemoDiffFoldUi(open) {
+        var isOpen = !!open;
+        if (diffChevron) diffChevron.classList.toggle('rotate-180', isOpen);
+        if (diffToggleLabel) diffToggleLabel.textContent = isOpen ? '收起' : '展开';
+      }
+
+      function setMemoDiffVisible(visible) {
+        var show = !!visible;
+        if (diffSection) diffSection.classList.toggle('hidden', !show);
+        if (!show) return;
+        var shouldOpen = state.memoEditor.diffExpanded !== false;
+        if (diffDetails && diffDetails.open !== shouldOpen) {
+          diffDetails.open = shouldOpen;
+        }
+        syncMemoDiffFoldUi(shouldOpen);
+      }
+
       if (!memo) {
         history.innerHTML = '<p class="text-sm text-gray-400">请选择一条备忘录查看版本历史。</p>';
+        setMemoDiffVisible(false);
         renderMemoDiffSelectors(state, null);
         renderMemoDiff(null, null);
         return;
@@ -742,10 +770,30 @@
         '</div>';
       }).join('');
 
+      var canShowDiff = versions.length > 1;
+      setMemoDiffVisible(canShowDiff);
+      if (!canShowDiff) {
+        renderMemoDiffSelectors(state, null);
+        renderMemoDiff(null, null);
+        return;
+      }
+
       renderMemoDiffSelectors(state, memo);
       var vA = getMemoVersionByNo(memo, state.memoEditor.diffVersionA);
       var vB = getMemoVersionByNo(memo, state.memoEditor.diffVersionB);
       renderMemoDiff(vA, vB);
+    }
+
+    function onMemoDiffToggle(open) {
+      var state = ensureNegotiationState();
+      if (!state) return;
+      ensureMemoEditorState(state);
+      state.memoEditor.diffExpanded = !!open;
+      saveNegotiationState();
+      var diffChevron = document.getElementById('memoDiffChevron');
+      var diffToggleLabel = document.getElementById('memoDiffToggleLabel');
+      if (diffChevron) diffChevron.classList.toggle('rotate-180', !!open);
+      if (diffToggleLabel) diffToggleLabel.textContent = open ? '收起' : '展开';
     }
 
     function updateMemoDiffSelection(which, versionNo) {
@@ -1380,7 +1428,7 @@
                   '<button id="memoEvidenceUploadBtn" onclick="triggerMemoEvidenceUpload()" class="px-2 py-1 text-[11px] font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-white">上传文件</button>' +
                   '<button id="memoEvidenceAiBtn" onclick="recognizeMemoFilesToSummary()" class="px-2 py-1 text-[11px] font-semibold rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50">AI识别写入摘要</button>' +
                 '</div>' +
-              '</div>' +
+              '</summary>' +
               '<p class="text-[11px] text-gray-400 mb-2">支持多文件上传；文本类文件可识别并回填摘要。</p>' +
               '<input id="memoEvidenceFileInput" type="file" class="hidden" multiple onchange="handleMemoEvidenceFiles(this.files)">' +
               '<div id="memoEvidenceList" class="space-y-2">' +
@@ -1477,16 +1525,24 @@
             '<h4 class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-clock-rotate-left mr-1.5 text-indigo-500"></i>版本历史</h4>' +
             '<div id="memoVersionHistory" class="space-y-2 text-sm text-gray-600">请选择一条备忘录查看版本历史。</div>' +
           '</div>' +
-          '<div class="mt-4 pt-4 border-t border-gray-100">' +
-            '<div class="flex items-center justify-between mb-2">' +
-              '<h4 class="text-xs font-bold text-gray-700"><i class="fas fa-code-compare mr-1.5 text-cyan-500"></i>字段差异对比</h4>' +
-              '<div class="flex items-center gap-1.5 text-[11px]">' +
-                '<select id="memoDiffVersionA" class="px-2 py-1 border border-gray-200 rounded bg-white" onchange="updateMemoDiffSelection(&quot;A&quot;, this.value)"></select>' +
-                '<span class="text-gray-400">vs</span>' +
-                '<select id="memoDiffVersionB" class="px-2 py-1 border border-gray-200 rounded bg-white" onchange="updateMemoDiffSelection(&quot;B&quot;, this.value)"></select>' +
+          '<div id="memoDiffSection" class="mt-4 pt-4 border-t border-gray-100">' +
+            '<details id="memoDiffDetails" class="group" ontoggle="onMemoDiffToggle(this.open)">' +
+              '<summary class="list-none cursor-pointer flex items-center justify-between gap-2">' +
+                '<h4 class="text-xs font-bold text-gray-700"><i class="fas fa-code-compare mr-1.5 text-cyan-500"></i>字段差异对比</h4>' +
+                '<div class="flex items-center gap-1.5 text-[11px] text-gray-500">' +
+                  '<span id="memoDiffToggleLabel">收起</span>' +
+                  '<i id="memoDiffChevron" class="fas fa-chevron-up transition-transform"></i>' +
+                '</div>' +
               '</div>' +
-            '</div>' +
-            '<div id="memoDiffBox" class="space-y-2 text-sm text-gray-600">请选择两个版本进行对比。</div>' +
+              '<div class="mt-2">' +
+                '<div class="flex items-center gap-1.5 text-[11px] mb-2">' +
+                  '<select id="memoDiffVersionA" class="px-2 py-1 border border-gray-200 rounded bg-white" onchange="updateMemoDiffSelection(&quot;A&quot;, this.value)"></select>' +
+                  '<span class="text-gray-400">vs</span>' +
+                  '<select id="memoDiffVersionB" class="px-2 py-1 border border-gray-200 rounded bg-white" onchange="updateMemoDiffSelection(&quot;B&quot;, this.value)"></select>' +
+                '</div>' +
+                '<div id="memoDiffBox" class="space-y-2 text-sm text-gray-600">请选择两个版本进行对比。</div>' +
+              '</div>' +
+            '</details>' +
           '</div>';
       }
 
