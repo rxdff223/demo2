@@ -1266,6 +1266,16 @@
       return '金额 ' + Number(terms.amountWan).toFixed(1) + '万 / 比例 ' + Number(terms.sharePct).toFixed(2) + '% / APR ' + Number(terms.aprPct).toFixed(2) + '% / 期限 ' + Number(terms.termMonths).toFixed(0) + '月';
     }
 
+    function getSelectedForecastSnapshot() {
+      if (!currentDeal || typeof ensureForecastState !== 'function') return null;
+      var fcState = ensureForecastState(currentDeal);
+      if (!fcState) return null;
+      var source = String(fcState.selectedSource || '').trim();
+      var value = Number(fcState.selectedValue);
+      if (!source || !Number.isFinite(value) || value <= 0) return null;
+      return { source: source, value: +value.toFixed(1) };
+    }
+
     // ---- 多方案对比：动态渲染所有提交的方案卡片 ----
     function renderProposalGrid(state) {
       var grid = document.getElementById('negProposalGrid');
@@ -1377,12 +1387,14 @@
       }
 
       // 私有预测
-      var priv = p.privateData || {};
       var srcMap = { system: '模型预估', borrower: '融资方预估', self: '自行填写' };
+      var selectedForecast = getSelectedForecastSnapshot();
+      var privValueText = selectedForecast ? (selectedForecast.value.toFixed(1) + ' 万') : '';
+      var privSourceText = selectedForecast ? (srcMap[selectedForecast.source] || selectedForecast.source || '') : '';
       var privEl = document.getElementById('pdPrivate');
       if (privEl) privEl.innerHTML =
-        pdCell('预测月均营业额', Number(priv.revenueWan || 0).toFixed(1) + ' 万') +
-        pdCell('来源', srcMap[priv.source] || priv.source || '--');
+        pdCell('预测月均营业额', privValueText) +
+        pdCell('来源', privSourceText);
 
       // 派生指标
       var d = p.derivedData || {};
