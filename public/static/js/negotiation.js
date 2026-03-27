@@ -877,6 +877,8 @@
       var version = memo ? getMemoCurrentVersion(memo) : null;
       var selectedPending = !!memo && memo.status === 'pending_confirmation';
       var roleConfirmed = selectedPending && hasCurrentRoleConfirmed(version);
+      var submitterRole = version && version.role ? String(version.role) : '';
+      var isCounterpartyOnPending = selectedPending && !!submitterRole && role !== submitterRole;
       var perms = {
         canEdit: false,
         canSaveDraft: false,
@@ -899,8 +901,9 @@
         return perms;
       }
       if (memo.status === 'pending_confirmation') {
-        perms.canConfirm = !roleConfirmed;
-        perms.canReject = role === 'financer' && !roleConfirmed;
+        perms.canConfirm = isCounterpartyOnPending && !roleConfirmed;
+        perms.canReject = isCounterpartyOnPending && !roleConfirmed;
+        perms.canCreateRevision = isCounterpartyOnPending && !roleConfirmed;
         return perms;
       }
       if (memo.status === 'confirmed') {
@@ -954,6 +957,7 @@
       var confirmActionsRow = document.getElementById('memoConfirmActionsRow');
       var confirmBtn = document.getElementById('memoBtnConfirm');
       var rejectBtn = document.getElementById('memoBtnReject');
+      var modifyBtn = document.getElementById('memoBtnModifyPending');
       var actionHint = document.getElementById('memoActionHint');
       var selectedVersion = selectedMemo ? getMemoCurrentVersion(selectedMemo) : null;
       var confirmCount = selectedVersion ? getMemoConfirmCount(selectedVersion.confirmMeta) : 0;
@@ -964,7 +968,7 @@
       setMemoFormDisabled(!perms.canEdit);
 
       if (topNewBtn) topNewBtn.classList.remove('hidden');
-      var showRevision = !!selectedMemo && perms.canCreateRevision;
+      var showRevision = !!selectedMemo && selectedMemo.status === 'confirmed' && perms.canCreateRevision;
 
       applyMemoPrimaryBtnStyle(
         saveBtn,
@@ -999,14 +1003,17 @@
         rejectBtn.classList.toggle('hidden', !showRejectBtn);
         rejectBtn.disabled = !showRejectBtn;
       }
-      if (confirmActionsRow) {
-        confirmActionsRow.classList.toggle('grid-cols-2', showRejectBtn);
-        confirmActionsRow.classList.toggle('grid-cols-1', !showRejectBtn);
+      var showModifyBtn = !!selectedMemo && selectedMemo.status === 'pending_confirmation' && !!perms.canCreateRevision;
+      if (modifyBtn) {
+        modifyBtn.classList.toggle('hidden', !showModifyBtn);
+        modifyBtn.disabled = !showModifyBtn;
       }
-      if (confirmBtn) {
-        confirmBtn.classList.toggle('w-full', !showRejectBtn);
-        confirmBtn.classList.toggle('col-span-2', !showRejectBtn);
-        confirmBtn.classList.toggle('col-span-1', showRejectBtn);
+      if (confirmActionsRow) {
+        var showConfirmBtn = !!(confirmBtn && (!(!perms.canConfirm && !perms.roleConfirmed)));
+        var visibleActionCount = (showConfirmBtn ? 1 : 0) + (showRejectBtn ? 1 : 0) + (showModifyBtn ? 1 : 0);
+        confirmActionsRow.classList.toggle('grid-cols-3', visibleActionCount >= 3);
+        confirmActionsRow.classList.toggle('grid-cols-2', visibleActionCount === 2);
+        confirmActionsRow.classList.toggle('grid-cols-1', visibleActionCount <= 1);
       }
       if (actionHint) {
         var hintText = '';
@@ -1014,8 +1021,8 @@
           hintText = '当前可新建备忘录并提交确认。';
         } else if (perms.canSaveDraft || perms.canSubmitConfirm) {
           hintText = '当前版本可编辑，可保存草稿或提交确认。';
-        } else if (perms.canConfirm || perms.canReject) {
-          hintText = '当前版本待确认，请按权限完成确认或拒绝。';
+        } else if (perms.canConfirm || perms.canReject || showModifyBtn) {
+          hintText = '当前版本待确认，请按权限完成确认、拒绝或修改。';
         } else if (perms.roleConfirmed) {
           hintText = '本方已确认，等待对方确认后生效。';
         } else if (perms.canCreateRevision) {
@@ -1487,8 +1494,9 @@
             '<button id="memoBtnCreateRevision" onclick="createMemoRevision()" class="hidden w-full px-3 py-2 text-xs font-semibold rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 disabled:opacity-50 disabled:cursor-not-allowed">基于当前版本生成修订稿</button>' +
             '<div id="memoFinancerActions" class="hidden space-y-2">' +
               '<div id="memoConfirmActionsRow" class="grid grid-cols-2 gap-2">' +
-                '<button id="memoBtnConfirm" onclick="confirmSelectedMemo()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">确认</button>' +
-                '<button id="memoBtnReject" onclick="openMemoRejectModal()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed">拒绝</button>' +
+                '<button id="memoBtnConfirm" onclick="confirmSelectedMemo()" class="w-full px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">确认</button>' +
+                '<button id="memoBtnReject" onclick="openMemoRejectModal()" class="w-full px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed">拒绝</button>' +
+                '<button id="memoBtnModifyPending" onclick="createMemoRevision()" class="hidden w-full px-3 py-2 text-xs font-semibold rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 disabled:opacity-40 disabled:cursor-not-allowed">修改</button>' +
               '</div>' +
             '</div>' +
             '<p id="memoActionHint" class="text-[11px] text-gray-400"></p>' +
@@ -1766,7 +1774,7 @@
       }
       var perms = getMemoActionPermissions(memo);
       if (!perms.canCreateRevision) {
-        showToast('info', '当前状态不可修订', '仅已确认版本可生成修订稿');
+        showToast('info', '当前状态不可修订', '仅已确认版本，或待确认阶段的对方，可生成修订稿');
         return;
       }
       var currentVersion = getMemoCurrentVersion(memo);
@@ -1820,7 +1828,7 @@
       }
       var perms = getMemoActionPermissions(memo);
       if (!perms.canCreateRevision) {
-        showToast('info', '当前状态不可修订', '仅已确认版本可生成修订稿');
+        showToast('info', '当前状态不可修订', '仅已确认版本，或待确认阶段的对方，可生成修订稿');
         return;
       }
       createMemoRevisionByBaseVersion(state, memo, baseVersion);
