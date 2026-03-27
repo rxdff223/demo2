@@ -1178,7 +1178,7 @@
         var badgeColor = isFinancer ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700';
         var roleName = isFinancer ? '融资方' : '投资方';
         var isOriginateDefault = p.sourceType === 'originate_default';
-        var proposalTitle = isOriginateDefault ? '期望方案' : ('方案 #' + (proposals.length - idx));
+        var proposalTitle = isOriginateDefault ? '期望方案 #1' : ('方案 #' + (proposals.length - idx));
         var statusText = getProposalStatusText(p.status);
         var statusCls = p.status === 'agreed' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600';
         var t = p.publicTerms || {};
@@ -1449,7 +1449,7 @@
         var isFinancer = p.perspective === 'financer';
         var roleName = isFinancer ? '融资方' : '投资方';
         var proposalLabel = p.sourceType === 'originate_default'
-          ? '期望方案'
+          ? '期望方案 #1'
           : ('方案 #' + (totalProposals - idx));
         var actions = [];
         var isSender = p.perspective === (currentPerspective || 'investor');
